@@ -1,0 +1,2 @@
+load("outbreak")
+registerCoreModule("outbreak")
