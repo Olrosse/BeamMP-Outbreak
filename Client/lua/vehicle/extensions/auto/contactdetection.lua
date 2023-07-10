@@ -127,7 +127,7 @@ local function updateGFX(dt)
 		--dump(vehData.lastColState, vehData.ColState)
 		if not vehData.lastColState and vehData.ColState then
 			obj:queueGameEngineLua("outbreak.sendContact(" .. tostring(ID) .. ")")
-			dump("collision")
+			--dump("collision")
 		end
 
 		vehData.lastColState = vehData.ColState
