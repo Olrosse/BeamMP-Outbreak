@@ -60,7 +60,7 @@ local function getPosOffset(id)
 	data.carWidth = obj:getInitialWidth()
 	data.carLength = obj:getInitialLength()
 	data.carHeight = obj:getInitialHeight()
-	obj:queueObjectLuaCommand(id, "contactdetection.setPosOffset(" .. tostring(vehicleID) .. ", " .. serialize(data) .. ")")
+	obj:queueObjectLuaCommand(id, "if contactdetection then contactdetection.setPosOffset(" .. tostring(vehicleID) .. ", " .. serialize(data) .. ") end")
 end
 
 local function setPosOffset(id,data)
@@ -118,7 +118,7 @@ local function updateGFX(dt)
 					end
 				end
 			else
-				obj:queueObjectLuaCommand(vehID,"contactdetection.getPosOffset(" .. tostring(vehicleID) .. ")")
+				obj:queueObjectLuaCommand(vehID,"if contactdetection then contactdetection.getPosOffset(" .. tostring(vehicleID) .. ") end")
 			end
 		end
 	end
@@ -126,7 +126,7 @@ local function updateGFX(dt)
 	for ID,vehData in pairs(vehiclemap) do -- TODO: make a proper hit detection that doesn't send duplicates
 		--dump(vehData.lastColState, vehData.ColState)
 		if not vehData.lastColState and vehData.ColState then
-			obj:queueGameEngineLua("outbreak.sendContact(" .. tostring(ID) .. ")")
+			obj:queueGameEngineLua("if outbreak then outbreak.sendContact(" .. tostring(ID) .. ") end")
 			--dump("collision")
 		end
 
