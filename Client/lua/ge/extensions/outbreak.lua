@@ -275,7 +275,7 @@ local function onPreRender(dt)
 	end
 	local distancecolor = math.min(0.4,1 -(closestInfected/(tempSetting or defaultGreenFadeDistance)))
 	if gamestate.settings and gamestate.settings.infectorTint and gamestate.players[curentOwnerName] and gamestate.players[curentOwnerName].infected then
-		distancecolor = 0.6
+		distancecolor = 0.5
 	end
 	--dump(distancecolor)
 	scenetree["PostEffectCombinePassObject"]:setField("enableBlueShift", 0,distancecolor)
