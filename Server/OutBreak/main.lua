@@ -14,6 +14,7 @@ local roundLenght = 60*5
 local defaultGreenFadeDistance = 100
 local defaultColorPulse = false
 local defaultInfectorTint = true
+local defaultDistancecolor = 0.5
 
 MP.RegisterEvent("onContactRecieve","onContact")
 MP.RegisterEvent("requestGameState","requestGameState")
@@ -102,9 +103,9 @@ function onContact(localPlayerID, data)
 	if gameState.gameRunning and not gameState.gameEnding then
 		local localPlayer = gameState.players[localPlayerName]
 		local remotePlayer = gameState.players[remotePlayerName]
-		local infectedCount = 0
-		local nonInfectedCount = 0
 		if localPlayer and remotePlayer then 
+			local infectedCount = 0
+			local nonInfectedCount = 0
 			if localPlayer.infected == true then
 				gameState.players[remotePlayerName].remoteContact = true
 				gameState.players[remotePlayerName].infecter = localPlayerName
@@ -133,13 +134,14 @@ function onContact(localPlayerID, data)
 					nonInfectedCount = nonInfectedCount + 1
 				end
 			end
-		end
-		gameState.InfectedPlayers = infectedCount
-		gameState.nonInfectedPlayers = nonInfectedCount
-		if nonInfectedCount == 0 then 
-			gameState.everyoneInfected = true
-			updateClients()
-			MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
+			gameState.InfectedPlayers = infectedCount
+			gameState.nonInfectedPlayers = nonInfectedCount
+
+			if nonInfectedCount == 0 then 
+				gameState.everyoneInfected = true
+				updateClients()
+				MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
+			end
 		end
 	end
 end
@@ -150,7 +152,8 @@ local function gameSetup()
 	gameState.settings = {
 		GreenFadeDistance = defaultGreenFadeDistance,
 		ColorPulse = defaultColorPulse,
-		infectorTint = defaultInfectorTint
+		infectorTint = defaultInfectorTint,
+		distancecolor = defaultDistancecolor
 		}
 	local playerCount = 0
 	for ID,Player in pairs(MP.GetPlayers()) do
@@ -208,7 +211,8 @@ local function gameEnd(reason)
 	elseif reason == "infected" then
 		MP.SendChatMessage(-1,"Game over, no survivors")
 	elseif reason == "manual" then
-		MP.SendChatMessage(-1,"Game stopped,"..nonInfectedCount.." survived and "..infectedCount.." got infected")
+		--MP.SendChatMessage(-1,"Game stopped,"..nonInfectedCount.." survived and "..infectedCount.." got infected")
+		MP.SendChatMessage(-1,"Game stopped, Everyone Looses")
 		gameState.endtime = gameState.time + 10
 	else
 		MP.SendChatMessage(-1,"Game stopped for uknown reason,"..nonInfectedCount.." survived and "..infectedCount.." got infected")
@@ -419,7 +423,7 @@ function outbreakChatMessageHandler(sender_id, sender_name, message)
 			MP.SendChatMessage(sender_id,"set greenFadeDist to "..value.."")
 			
 		else
-			MP.SendChatMessage(sender_id,"setting roundLenght failed, no value")
+			MP.SendChatMessage(sender_id,"setting greenFadeDist failed, no value")
 		end
 		return 1
 
@@ -449,6 +453,20 @@ function outbreakChatMessageHandler(sender_id, sender_name, message)
 		end
 		return 1
 
+    elseif string.find(message,"/outbreak filterIntensity set %d+") then
+		local value = tonumber(string.sub(message,31,10000))
+		if value then
+			defaultDistancecolor = value
+			if gameState.settings then
+				gameState.settings.distancecolor = defaultDistancecolor
+			end 
+			MP.SendChatMessage(sender_id,"set filterIntensity to "..value.."")
+			
+		else
+			MP.SendChatMessage(sender_id,"setting filterIntensity failed, no value")
+		end
+		return 1
+
     elseif string.find(message,"/outbreak reset") then
 			weightingArray = {}
 		return 1
@@ -462,6 +480,8 @@ function outbreakChatMessageHandler(sender_id, sender_name, message)
 		MP.SendChatMessage(sender_id,"/outbreak greenFadeDist set (meters)")
 		MP.SendChatMessage(sender_id,"/outbreak ColorPulse toggle")
 		MP.SendChatMessage(sender_id,"/outbreak infector tint toggle")
+		MP.SendChatMessage(sender_id,"/outbreak filterIntensity set (0 to 1)")
+		
 	--	excludedPlayers[]
 		return 1
     else
