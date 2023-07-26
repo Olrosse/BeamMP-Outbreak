@@ -1,4 +1,7 @@
 
+local floor = math.floor
+local mod = math.fmod
+
 local gameState = {players = {}}
 local laststate = gameState
 local weightingArray = {}
@@ -7,18 +10,39 @@ gameState.everyoneInfected = false
 gameState.gameRunning = false
 gameState.gameEnding = false
 
-local includedPlayers = {}
-local excludedPlayers = {}
+local includedPlayers = {} --TODO make these do something
+local excludedPlayers = {} --TODO make these do something
 
-local roundLenght = 60*5
-local defaultGreenFadeDistance = 100
-local defaultColorPulse = false
-local defaultInfectorTint = true
-local defaultDistancecolor = 0.5
+local roundLenght = 5*60 -- lenght of the game in seconds
+local defaultGreenFadeDistance = 100 -- how close the infector has to be for the screen to start to turn green
+local defaultColorPulse = false -- if the car color should pulse between the car color and green
+local defaultInfectorTint = true -- if the infecor should have a green tint
+local defaultDistancecolor = 0.5 -- max intensity of the green filter
 
 MP.RegisterEvent("onContactRecieve","onContact")
 MP.RegisterEvent("requestGameState","requestGameState")
 MP.TriggerClientEvent(-1, "resetInfected", "data")
+
+local function seconds_to_days_hours_minutes_seconds(total_seconds) --modified code from https://stackoverflow.com/questions/45364628/lua-4-script-to-convert-seconds-elapsed-to-days-hours-minutes-seconds
+    local time_days     = floor(total_seconds / 86400)
+    local time_hours    = floor(mod(total_seconds, 86400) / 3600)
+    local time_minutes  = floor(mod(total_seconds, 3600) / 60)
+    local time_seconds  = floor(mod(total_seconds, 60))
+
+	if time_days == 0 then
+		time_days = nil
+	end
+    if time_hours == 0 then
+        time_hours = nil
+    end
+	if time_minutes == 0 then
+		time_minutes = nil
+	end
+	if time_seconds == 0 then
+		time_seconds = nil
+	end
+    return time_days ,time_hours , time_minutes , time_seconds
+end
 
 local function updateClients()
 	local tempTable = {}
@@ -97,50 +121,49 @@ function requestGameState(localPlayerID)
 	MP.TriggerClientEventJson(localPlayerID, "recieveGameState", gameState)
 end
 
+local function infectPlayer(playerName,force)
+	local player = gameState.players[playerName]
+	if player.localContact and player.remoteContact and not player.infected or force and not player.infected then
+		player.infected = true
+		if not force then
+			local infectorPlayerName = player.infecter
+			gameState.players[infectorPlayerName].stats.infected = gameState.players[infectorPlayerName].stats.infected + 1
+			gameState.InfectedPlayers = gameState.InfectedPlayers + 1
+			gameState.nonInfectedPlayers = gameState.nonInfectedPlayers - 1
+			gameState.oneInfected = true
+
+			MP.SendChatMessage(-1,""..infectorPlayerName.." has infected "..playerName.."!")
+		else
+			MP.SendChatMessage(-1,"server has infected "..playerName.."!")
+		end
+
+		MP.TriggerClientEvent(-1, "recieveInfected", playerName)
+
+		updateClients()
+		--MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
+	end
+end
+
 function onContact(localPlayerID, data)
 	local remotePlayerName = MP.GetPlayerName(tonumber(data))
 	local localPlayerName = MP.GetPlayerName(localPlayerID)
 	if gameState.gameRunning and not gameState.gameEnding then
 		local localPlayer = gameState.players[localPlayerName]
 		local remotePlayer = gameState.players[remotePlayerName]
-		if localPlayer and remotePlayer then 
-			local infectedCount = 0
-			local nonInfectedCount = 0
-			if localPlayer.infected == true then
+		if localPlayer and remotePlayer then
+			if localPlayer.infected and not remotePlayer.infected then
 				gameState.players[remotePlayerName].remoteContact = true
 				gameState.players[remotePlayerName].infecter = localPlayerName
+				infectPlayer(remotePlayerName)
 			end
-			if remotePlayer.infected == true then
+			if remotePlayer.infected and not localPlayer.infected then
 				gameState.players[localPlayerName].localContact = true
 				gameState.players[localPlayerName].infecter = remotePlayerName
+				infectPlayer(localPlayerName)
 			end
-			for k,player in pairs(gameState.players) do
-				if player.localContact and player.remoteContact and not player.infected then
-					player.infected = true
-					local playername = k
-					local infectorPlayerName = player.infecter
-					MP.SendChatMessage(-1,""..infectorPlayerName.." has infected "..playername.."!")
-
-					gameState.players[infectorPlayerName].stats.infected = gameState.players[infectorPlayerName].stats.infected + 1
-
-					infectedCount = infectedCount + 1
-					MP.TriggerClientEvent(-1, "recieveInfected", k)
-					gameState.oneInfected = true
-					updateClients()
-					MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
-				elseif player.infected then
-					infectedCount = infectedCount + 1
-				elseif not player.infected then
-					nonInfectedCount = nonInfectedCount + 1
-				end
-			end
-			gameState.InfectedPlayers = infectedCount
-			gameState.nonInfectedPlayers = nonInfectedCount
-
-			if nonInfectedCount == 0 then 
+			if gameState.nonInfectedPlayers == 0 then 
 				gameState.everyoneInfected = true
 				updateClients()
-				MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
 			end
 		end
 	end
@@ -157,7 +180,7 @@ local function gameSetup()
 		}
 	local playerCount = 0
 	for ID,Player in pairs(MP.GetPlayers()) do
-		if MP.IsPlayerConnected(ID) then
+		if MP.IsPlayerConnected(ID) and MP.GetPlayerVehicles(ID) then
 			if not weightingArray[Player] then
 				weightingArray[Player] = {}
 				weightingArray[Player].games = 1
@@ -179,10 +202,16 @@ local function gameSetup()
 			MP.TriggerClientEvent(-1, "addPlayers", Player)
 		end
 	end
+
+	if playerCount == 0 then
+		MP.SendChatMessage(-1,"Failed to start, found no vehicles")
+		return
+	end
+
 	gameState.playerCount = playerCount
 	gameState.InfectedPlayers = 0
 	gameState.nonInfectedPlayers = playerCount
-	gameState.time = -10
+	gameState.time = -5
 	gameState.roundLenght = roundLenght
 	gameState.endtime = -1
 	gameState.oneInfected = false
@@ -217,13 +246,151 @@ local function gameEnd(reason)
 	else
 		MP.SendChatMessage(-1,"Game stopped for uknown reason,"..nonInfectedCount.." survived and "..infectedCount.." got infected")
 	end
+	--print(gameState)
+end
+
+local function infectRandomPlayer()
+	gameState.oneInfected = false
+	local players = gameState.players
+	local weightRatio = 0
+	for playername,player in pairs(players) do
+
+		local infections = weightingArray[playername].infections
+		local games = weightingArray[playername].games
+		local playerCount = gameState.playerCount
+
+		local weight = math.max(1,(1/((games/infections)/playerCount))*100)
+		weightingArray[playername].startNumber = weightRatio
+		weightRatio = weightRatio + weight
+		weightingArray[playername].endNumber = weightRatio
+		weightingArray[playername].weightRatio = weightRatio
+		--print(playername,weightingArray[playername].endNumber - weightingArray[playername].startNumber,weightingArray[playername].startNumber , weightingArray[playername].endNumber,weightingArray[playername].infections,weightingArray[playername].games,gameState.playerCount)
+	end
+
+	local randomID = math.random(1, math.floor(weightRatio))
+	
+	for playername,player in pairs(players) do
+		if randomID >= weightingArray[playername].startNumber and randomID <= weightingArray[playername].endNumber then--if count == randomID then
+			if not gameState.oneInfected then
+				gameState.players[playername].remoteContact = true
+				gameState.players[playername].localContact = true
+				gameState.players[playername].infected = true
+
+				if gameState.time == 5 then
+					MP.SendChatMessage(-1,""..playername.." is first infected!")
+				else
+					MP.SendChatMessage(-1,"no infected players, "..playername.." has been randomly infected!")
+				end
+				MP.TriggerClientEvent(-1, "recieveInfected", playername)
+				gameState.oneInfected = true
+				gameState.InfectedPlayers = gameState.InfectedPlayers + 1
+				gameState.nonInfectedPlayers = gameState.nonInfectedPlayers - 1
+			end
+		else
+			weightingArray[playername].infections = weightingArray[playername].infections + 100
+		end
+	end
+	--print(infectedCount , gameState.playerCount , nonInfectedCount)
+	if gameState.InfectedPlayers >= gameState.playerCount and gameState.nonInfectedPlayers == 0 then
+		gameState.everyoneInfected = true
+	end
+
+	MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
+	--print(randomID,weightingArray)
+end
+
+local function gameStarting()
+	local days, hours , minutes , seconds = seconds_to_days_hours_minutes_seconds(roundLenght)
+	local amount = 0
+	if days then
+		amount = amount + 1
+	end
+	if hours then
+		amount = amount + 1
+	end
+	if minutes then
+		amount = amount + 1
+	end
+	if seconds then
+		amount = amount + 1
+	end
+	if days then
+		amount = amount - 1
+		if days == 1 then
+			if amount > 1 then
+				days = ""..days.." day, "
+			elseif amount == 1 then
+				days = ""..days.." day and "
+			elseif amount == 0 then
+				days = ""..days.." day "
+			end
+		else
+			if amount > 1 then
+				days = ""..days.." days, "
+			elseif amount == 1 then
+				days = ""..days.." days and "
+			elseif amount == 0 then
+				days = ""..days.." days "
+			end
+		end
+	end
+	if hours then
+		amount = amount - 1
+		if hours == 1 then
+			if amount > 1 then
+				hours = ""..hours.." hour, "
+			elseif amount == 1 then
+				hours = ""..hours.." hour and "
+			elseif amount == 0 then
+				hours = ""..hours.." hour "
+			end
+		else
+			if amount > 1 then
+				hours = ""..hours.." hours, "
+			elseif amount == 1 then
+				hours = ""..hours.." hours and "
+			elseif amount == 0 then
+				hours = ""..hours.." hours "
+			end
+		end
+	end
+	if minutes then
+		amount = amount - 1
+		if minutes == 1 then
+			if amount > 1 then
+				minutes = ""..minutes.." minute, "
+			elseif amount == 1 then
+				minutes = ""..minutes.." minute and "
+			elseif amount == 0 then
+				minutes = ""..minutes.." minute "
+			end
+		else
+			if amount > 1 then
+				minutes = ""..minutes.." minutes, "
+			elseif amount == 1 then
+				minutes = ""..minutes.." minutes and "
+			elseif amount == 0 then
+				minutes = ""..minutes.." minutes "
+			end
+		end
+	end
+	if seconds then
+		if seconds == 1 then
+			seconds = ""..seconds.." second "
+		else
+			seconds = ""..seconds.." seconds "
+		end
+	end
+
+	MP.SendChatMessage(-1,"Infection game started, you have to survive for "..(days or "")..""..(hours or "")..""..(minutes or "")..""..(seconds or "").."")
 end
 
 local function gameRunningLoop()
 	if gameState.time < 0 then
 		MP.SendChatMessage(-1,"Infection game starting in "..math.abs(gameState.time).." second")
+
 	elseif gameState.time == 0 then
-		MP.SendChatMessage(-1,"Infection game started, you have "..roundLenght.." seconds to survive")
+		gameStarting()
 	end
 
 	if not gameState.gameEnding and gameState.playerCount == 0 then
@@ -231,78 +398,13 @@ local function gameRunningLoop()
 		gameState.endtime = gameState.time + 2
 	end
 
-	if not gameState.gameEnding and gameState.time >= 5 then
-		local infectedCount = 0
-		local nonInfectedCount = 0
-		for k,player in pairs(gameState.players) do
-			if player.infected then
-				infectedCount = infectedCount + 1
-			elseif not player.infected then
-				nonInfectedCount = nonInfectedCount + 1
-			end
-		end
-		if infectedCount == 0 and nonInfectedCount ~= 0 then
-			gameState.oneInfected = false
-			local players = gameState.players
-			local weightRatio = 0
-			for playername,player in pairs(players) do
-
-				local infections = weightingArray[playername].infections
-				local games = weightingArray[playername].games
-				local playerCount = gameState.playerCount
-
-				local weight = math.max(1,(1/((games/infections)/playerCount))*100)
-				weightingArray[playername].startNumber = weightRatio
-				weightRatio = weightRatio + weight
-				weightingArray[playername].endNumber = weightRatio
-				weightingArray[playername].weightRatio = weightRatio
-				--print(playername,weightingArray[playername].endNumber - weightingArray[playername].startNumber,weightingArray[playername].startNumber , weightingArray[playername].endNumber,weightingArray[playername].infections,weightingArray[playername].games,gameState.playerCount)
-			end
-
-			local randomID = math.random(1, math.floor(weightRatio))
-			
-			for playername,player in pairs(players) do
-				if randomID >= weightingArray[playername].startNumber and randomID <= weightingArray[playername].endNumber then--if count == randomID then
-					if not gameState.oneInfected then
-						gameState.players[playername].remoteContact = true
-						gameState.players[playername].localContact = true
-						gameState.players[playername].infected = true
-
-						if gameState.time == 5 then
-							MP.SendChatMessage(-1,""..playername.." is first infected!")
-						else
-							MP.SendChatMessage(-1,"no infected players, "..playername.." has been randomly infected!")
-						end
-						MP.TriggerClientEvent(-1, "recieveInfected", playername)
-						gameState.oneInfected = true
-						nonInfectedCount = nonInfectedCount - 1
-						infectedCount = infectedCount + 1
-					end
-				else
-					weightingArray[playername].infections = weightingArray[playername].infections + 100
-				end
-			end
-			--print(infectedCount , gameState.playerCount , nonInfectedCount)
-			if infectedCount >= gameState.playerCount and nonInfectedCount == 0 then
-				gameState.everyoneInfected = true
-			end
-			
-			gameState.InfectedPlayers = infectedCount
-			gameState.nonInfectedPlayers = nonInfectedCount
-			MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
-			--print(randomID,weightingArray)
-		end
-	end
-
 	local players = gameState.players
- 
 
 	if not gameState.gameEnding and gameState.time > 0 then
 		local infectedCount = 0
 		local nonInfectedCount = 0
 		local playercount = 0
 		for playername,player in pairs(players) do
-			playercount = playercount + 1
 			if player.localContact and player.remoteContact and not player.infected then
 				player.infected = true
 				MP.SendChatMessage(-1,""..playername.." has been infected!")
@@ -314,11 +416,18 @@ local function gameRunningLoop()
 			elseif not player.infected then
 				nonInfectedCount = nonInfectedCount + 1
 			end
+			playercount = playercount + 1
 		end
-			
+		if infectedCount >= gameState.playerCount and nonInfectedCount == 0 then
+			gameState.everyoneInfected = true
+		end
 		gameState.InfectedPlayers = infectedCount
 		gameState.nonInfectedPlayers = nonInfectedCount
 		gameState.playerCount = playercount
+
+		if gameState.time >= 5 and infectedCount == 0 then
+			infectRandomPlayer()
+		end
 	end
 
 	if not gameState.gameEnding and gameState.time == gameState.roundLenght then
@@ -349,11 +458,19 @@ local function gameRunningLoop()
 	--print(gameState)
 end
 
+autoStart = false
+local autoStartTimer = 0
+
 function timer()
 	if gameState.gameRunning then
 		gameRunningLoop()
-	else
-		--gameSetup()
+	elseif autoStart and MP.GetPlayerCount() > -1 then
+		autoStartTimer = autoStartTimer + 1
+		--print(autoStartTimer)
+		if autoStartTimer >= 30 then
+			autoStartTimer = 0
+			gameSetup()
+		end
 	end
 end
 
@@ -493,7 +610,15 @@ function onPlayerDisconnect(playerID)
 	local PlayerName = MP.GetPlayerName(playerID)
 	if gameState.gameRunning and gameState.players and gameState.players[PlayerName] then
 		gameState.players[PlayerName] = nil
-		--gameState.playerCount = gameState.playerCount - 1
+	end
+end
+
+function onVehicleDeleted(playerID,vehicleID)
+	local PlayerName = MP.GetPlayerName(playerID)
+	if gameState.gameRunning and gameState.players and gameState.players[PlayerName] then
+		if not MP.GetPlayerVehicles(playerID) then
+			gameState.players[PlayerName] = nil
+		end
 	end
 end
 
@@ -502,4 +627,6 @@ MP.TriggerClientEvent(-1, "resetInfected", "data")
 
 MP.RegisterEvent("onChatMessage", "outbreakChatMessageHandler")
 MP.RegisterEvent("onPlayerDisconnect", "onPlayerDisconnect")
+MP.RegisterEvent("onVehicleDeleted", "onVehicleDeleted")
 MP.RegisterEvent("onPlayerJoin", "requestGameState")
+
