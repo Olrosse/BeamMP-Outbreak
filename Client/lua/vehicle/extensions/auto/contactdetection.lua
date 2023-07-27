@@ -126,7 +126,7 @@ local function updateGFX(dt)
 	for ID,vehData in pairs(vehiclemap) do -- TODO: make a proper hit detection that doesn't send duplicates
 		--dump(vehData.lastColState, vehData.ColState)
 		if not vehData.lastColState and vehData.ColState then
-			obj:queueGameEngineLua("if outbreak then outbreak.sendContact(" .. tostring(ID) .. ") end")
+			obj:queueGameEngineLua("if outbreak then outbreak.sendContact(" .. tostring(ID) .. ","..tostring(vehicleID)..") end")
 			--dump("collision")
 		end
 

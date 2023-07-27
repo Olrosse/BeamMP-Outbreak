@@ -44,80 +44,41 @@ local function seconds_to_days_hours_minutes_seconds(total_seconds) --modified c
     return time_days ,time_hours , time_minutes , time_seconds
 end
 
+local function compareTable(gameState,tempTable,laststate)
+	for varableName,varable in pairs(gameState) do
+		if type(varable) == "table" then
+			if not laststate[varableName] then
+				laststate[varableName] = {}
+			end
+			if not tempTable[varableName] then
+				tempTable[varableName] = {}
+			end
+			compareTable(gameState[varableName],tempTable[varableName],laststate[varableName])
+			if type(tempTable[varableName]) == "table" and next(tempTable[varableName]) == nil then
+				tempTable[varableName] = nil
+			end
+		elseif varable == "remove" then
+			tempTable[varableName] = gameState[varableName]
+			laststate[varableName] = nil
+			gameState[varableName] = nil
+		elseif laststate[varableName] ~= varable then
+			tempTable[varableName] = gameState[varableName]
+			laststate[varableName] = gameState[varableName]
+		end
+	end
+end
+
 local function updateClients()
 	local tempTable = {}
 
-	for variableName,value in pairs(gameState) do
+	compareTable(gameState,tempTable,laststate)
 
-		if variableName == "players" then
-			if not next(value) and next(laststate[variableName]) then
-				laststate[variableName] = value
-				tempTable[variableName] = {removed = true}
-			end
-			for playerName,PlayerVariables in pairs(value) do
-
-				if not laststate[variableName][playerName] then
-					laststate[variableName][playerName] = {}
-				end
-
-				for playerVariableName,Playervalue in pairs(PlayerVariables) do
-
-					if laststate[variableName][playerName][playerVariableName] ~= Playervalue then
-
-						if not tempTable[variableName] then
-							tempTable[variableName] = {}
-						end
-						if not tempTable[variableName][playerName] then
-							tempTable[variableName][playerName] = {}
-						end
-
-						tempTable[variableName][playerName][playerVariableName] = Playervalue
-						laststate[variableName][playerName][playerVariableName] = Playervalue
-					end
-
-				end
-			end
-
-			if laststate.players then
-				for playerName,PlayerVariables in pairs(laststate.players) do
-					if not gameState.players[playerName] then
-						laststate.players[playerName] = nil
-						if not tempTable.player then
-							tempTable.players = {}
-						end
-						tempTable.players[playerName] = {}
-						tempTable.players[playerName].removed = true
-					end 
-				end
-			end
-		elseif variableName == "settings" then
-			if not laststate[variableName] then
-				laststate[variableName] = {}
-			end
-			for settingName,settingVariable in pairs(value) do
-				if laststate[variableName][settingName] ~= settingVariable then
-					if not tempTable[variableName] then
-						tempTable[variableName] = {}
-					end
-					laststate[variableName][settingName] = settingVariable
-					tempTable[variableName][settingName] = settingVariable
-				end
-			end
-		else
-			if laststate[variableName] ~= value then
-				tempTable[variableName] = value
-				laststate[variableName] = value
-			end
-		end
-	end
 	if tempTable and next(tempTable) ~= nil then
-		--if tempTable.players then print(tempTable.players,"1",laststate.players,"2",gameState.players) end
 		MP.TriggerClientEventJson(-1, "updateGameState", tempTable)
 	end
 end
 
 function requestGameState(localPlayerID)
-	--print(localPlayerID,gameState)
 	MP.TriggerClientEventJson(localPlayerID, "recieveGameState", gameState)
 end
 
@@ -609,7 +570,7 @@ end
 function onPlayerDisconnect(playerID)
 	local PlayerName = MP.GetPlayerName(playerID)
 	if gameState.gameRunning and gameState.players and gameState.players[PlayerName] then
-		gameState.players[PlayerName] = nil
+		gameState.players[PlayerName] = "remove"
 	end
 end
 
@@ -617,7 +578,7 @@ function onVehicleDeleted(playerID,vehicleID)
 	local PlayerName = MP.GetPlayerName(playerID)
 	if gameState.gameRunning and gameState.players and gameState.players[PlayerName] then
 		if not MP.GetPlayerVehicles(playerID) then
-			gameState.players[PlayerName] = nil
+			gameState.players[PlayerName] = "remove"
 		end
 	end
 end
