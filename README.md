@@ -7,7 +7,7 @@ How to use, in the release build just unpack the zip into the server recourses a
 
 Thanks to Stefan750 for some help with colors and screen tint and Saile for help with the weighted randomizer
 
-Also the Neilogical/Camodo aswell as the Failrace crew for feedback and testing.
+Also to the Neilogical/Camodo crew aswell as the Failrace crew for feedback and testing.
 
 
 Some notes
