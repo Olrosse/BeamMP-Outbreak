@@ -63,6 +63,15 @@ local function getPosOffset(id)
 	obj:queueObjectLuaCommand(id, "if contactdetection then contactdetection.setPosOffset(" .. tostring(vehicleID) .. ", " .. serialize(data) .. ") end")
 end
 
+local function sendPosOffsetToAll()
+	local data = {}
+	data.offset = carCenter
+	data.carWidth = obj:getInitialWidth()
+	data.carLength = obj:getInitialLength()
+	data.carHeight = obj:getInitialHeight()
+	BeamEngine:queueAllObjectLuaExcept("if contactdetection then contactdetection.setPosOffset(" .. tostring(vehicleID) .. ", " .. serialize(data) .. ") end",vehicleID)
+end
+
 local function setPosOffset(id,data)
 	if not vehiclemap[id] then
 		vehiclemap[id] = {}
@@ -80,6 +89,7 @@ local function updateGFX(dt)
 		carWidth = obj:getInitialWidth()
 		carLength = obj:getInitialLength()
 		carHeight = obj:getInitialHeight()
+		sendPosOffsetToAll()
 	end
 
 	if v.mpVehicleType == "R" then return end
@@ -111,7 +121,7 @@ local function updateGFX(dt)
 					local pos = vehData.pos - offset:rotated(rot)
 
 					local distance = distance(vehiclePosition, pos)
-					if distance < ((vehiclemap[vehID].carLength+carLength)/2)*1.01 then
+					if distance < ((vehiclemap[vehID].carLength+carLength)/2)*1.1 then
 						detectcolor = color(0,255,0,200)
 						--outbreak.sendContact(323899)
 						vehiclemap[vehID].ColState = true
