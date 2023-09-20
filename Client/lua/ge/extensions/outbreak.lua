@@ -309,6 +309,7 @@ local function onPreRender(dt)
 		tempSetting = gamestate.settings.GreenFadeDistance
 	end
 	distancecolor = math.min(0.4,1 -(closestInfected/(tempSetting or defaultGreenFadeDistance)))
+
 	--if distancecolor > 0 then
 	--	core_input_actionFilter.setGroup('vehicleTeleporting', actionTemplate.vehicleTeleporting)
 	--	core_input_actionFilter.addAction(0, 'vehicleTeleporting', true)
@@ -319,6 +320,7 @@ local function onPreRender(dt)
 	--	core_input_actionFilter.addAction(0, 'vehicleTeleporting', false)
 	---	core_input_actionFilter.addAction(0, 'resetPhysics', false)
 	--end
+	
 	--dump(distancecolor)
 	if gamestate.settings and gamestate.settings.infectorTint and gamestate.players[curentOwnerName] and gamestate.players[curentOwnerName].infected then
 		distancecolor = gamestate.settings.distancecolor or 0.5
@@ -344,7 +346,7 @@ if MPGameNetwork then AddEventHandler("resetInfected", resetInfected) end
 if MPGameNetwork then AddEventHandler("recieveGameState", recieveGameState) end
 if MPGameNetwork then AddEventHandler("updateGameState", updateGameState) end
 
-requestGameState()
+--requestGameState()
 
 M.requestGameState = requestGameState
 M.sendContact = sendContact
