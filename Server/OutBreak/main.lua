@@ -19,6 +19,7 @@ local defaultColorPulse = false -- if the car color should pulse between the car
 local defaultInfectorTint = true -- if the infecor should have a green tint
 local defaultDistancecolor = 0.5 -- max intensity of the green filter
 
+MP.RegisterEvent("infection_clientReady","infection_clientReady")
 MP.RegisterEvent("onContactRecieve","onContact")
 MP.RegisterEvent("requestGameState","requestGameState")
 MP.TriggerClientEvent(-1, "resetInfected", "data")
@@ -75,6 +76,16 @@ local function updateClients()
 
 	if tempTable and next(tempTable) ~= nil then
 		MP.TriggerClientEventJson(-1, "updateGameState", tempTable)
+	end
+end
+
+function infection_clientReady(localPlayerID, data)
+	local playerName = MP.GetPlayerName(localPlayerID)
+	if playerName then
+		local player = gameState.players[playerName]
+		if player then
+			gameState.players[playerName].responded = true
+		end
 	end
 end
 
@@ -180,7 +191,7 @@ local function gameSetup()
 	gameState.gameRunning = true
 	gameState.gameEnding = false
 	gameState.gameEnded = false
-	
+
 	MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
 end
 
@@ -229,7 +240,7 @@ local function infectRandomPlayer()
 	end
 
 	local randomID = math.random(1, math.floor(weightRatio))
-	
+
 	for playername,player in pairs(players) do
 		if randomID >= weightingArray[playername].startNumber and randomID <= weightingArray[playername].endNumber then--if count == randomID then
 			if not gameState.oneInfected then
@@ -347,19 +358,33 @@ local function gameStarting()
 end
 
 local function gameRunningLoop()
+	local players = gameState.players
+
 	if gameState.time < 0 then
 		MP.SendChatMessage(-1,"Infection game starting in "..math.abs(gameState.time).." second")
 
 	elseif gameState.time == 0 then
 		gameStarting()
+		local unresponsiveString = ""
+		for playername,_ in pairs(players) do
+			if not gameState.players[playername].responded then
+				gameState.players[playername] = "remove"
+				if unresponsiveString == "" then
+					unresponsiveString = unresponsiveString .. playername
+				else
+					unresponsiveString = unresponsiveString  .. "," .. playername
+				end
+			end
+		end
+		if unresponsiveString ~= "" then
+			MP.SendChatMessage(-1,""..unresponsiveString.." did not respond and was removed from this round, rejoining the server should fix this issue")
+		end
 	end
 
 	if not gameState.gameEnding and gameState.playerCount == 0 then
 		gameState.gameEnding = true
 		gameState.endtime = gameState.time + 2
 	end
-
-	local players = gameState.players
 
 	if not gameState.gameEnding and gameState.time > 0 then
 		local infectedCount = 0
@@ -370,6 +395,11 @@ local function gameRunningLoop()
 				player.infected = true
 				MP.SendChatMessage(-1,""..playername.." has been infected!")
 				MP.TriggerClientEvent(-1, "recieveInfected", playername)
+			elseif player.stats and gameState.time > 5 and not player.infected then
+				if  not player.stats.survivedTime then
+					player.stats.survivedTime = 5
+				end
+				player.stats.survivedTime = player.stats.survivedTime + 1
 			end
 
 			if player.infected then
@@ -422,13 +452,15 @@ end
 autoStart = false
 local autoStartTimer = 0
 
+local autoStartWaitInSeconds = 600
+
 function timer()
 	if gameState.gameRunning then
 		gameRunningLoop()
 	elseif autoStart and MP.GetPlayerCount() > -1 then
 		autoStartTimer = autoStartTimer + 1
 		--print(autoStartTimer)
-		if autoStartTimer >= 30 then
+		if autoStartTimer >= autoStartWaitInSeconds then
 			autoStartTimer = 0
 			gameSetup()
 		end
@@ -442,128 +474,183 @@ MP.CancelEventTimer("counter")
 MP.CancelEventTimer("second")
 MP.CreateEventTimer("second",1000)
 
+
+
+local commands = {}
+
+local function help(sender_id, sender_name, message, variable)
+	MP.SendChatMessage(sender_id,"Infection command list")
+
+	for k,v in pairs(commands) do
+		local usage
+		if v.usage then
+			usage = v.usage..","
+		else
+			usage = ""
+		end
+		MP.SendChatMessage(sender_id,"/infection "..k..", "..usage.." "..v.tooltip.."")
+	end
+end
+
+local function join(sender_id, sender_name, message, number)
+	local playerid = number or sender_id
+	local playername = MP.GetPlayerName(playerid)
+	includedPlayers[playerid] = true
+	MP.SendChatMessage(sender_id,"enabled for "..playername.."")
+end
+
+local function leave(sender_id, sender_name, message, number)
+	local playerid = number or sender_id
+	local playername = MP.GetPlayerName(playerid)
+	includedPlayers[playerid] = nil
+	MP.SendChatMessage(sender_id,"enabled for "..playername.."")
+end
+
+local function start(sender_id, sender_name, message, value)
+	if not gameState.gameRunning then
+		gameSetup(value)
+	else
+		MP.SendChatMessage(sender_id,"gamestart failed, game already running")
+	end
+end
+
+local function stop(sender_id)
+	if gameState.gameRunning then
+		gameEnd("manual")
+	else
+		MP.SendChatMessage(sender_id,"gamestop failed, game not running")
+	end
+end
+
+local function gameLength(sender_id, sender_name, message, value)
+	if value then
+		roundLenght = value*60
+		MP.SendChatMessage(sender_id,"set game length to "..value.."")
+
+	else
+		MP.SendChatMessage(sender_id,"setting roundLenght failed, no value")
+	end
+end
+
+local function reset(sender_id, sender_name, message, variable)
+	weightingArray = {}
+end
+
+local function greenFadeDist(sender_id, sender_name, message, value)
+	if value then
+		defaultGreenFadeDistance = value
+		if gameState.settings then
+			gameState.settings.GreenFadeDistance = defaultGreenFadeDistance
+		end
+		MP.SendChatMessage(sender_id,"set greenFadeDist to "..value.."")
+
+	else
+		MP.SendChatMessage(sender_id,"setting greenFadeDist failed, no value")
+	end
+end
+
+local function ColorPulse(sender_id, sender_name, message, value)
+	if defaultColorPulse then
+		defaultColorPulse = false
+		MP.SendChatMessage(sender_id,"setting ColorPulse to false")
+	else
+		defaultColorPulse = true
+		MP.SendChatMessage(sender_id,"setting ColorPulse to true")
+	end
+	if gameState.settings then
+		gameState.settings.ColorPulse = defaultColorPulse
+	end
+end
+
+local function infectorTint(sender_id, sender_name, message, value)
+	if defaultInfectorTint then
+		defaultInfectorTint = false
+		MP.SendChatMessage(sender_id,"setting infector tint to false")
+	else
+		defaultInfectorTint = true
+		MP.SendChatMessage(sender_id,"setting infector tint to true")
+	end
+	if gameState.settings then
+		gameState.settings.infectorTint = defaultInfectorTint
+	end
+end
+
+local function filterIntensity(sender_id, sender_name, message, value)
+	if value then
+		defaultDistancecolor = value
+		if gameState.settings then
+			gameState.settings.distancecolor = defaultDistancecolor
+		end
+		MP.SendChatMessage(sender_id,"set filterIntensity to "..value.."")
+		
+	else
+		MP.SendChatMessage(sender_id,"setting filterIntensity failed, no value")
+	end
+end
+
+commands = {
+	["help"] = {
+		["function"] = help,
+		["tooltip"] = "lists all commands"
+	},
+	["start"] = {
+		["function"] = start,
+		["tooltip"] = "starts infection game",
+		["usage"] = "optional time in minutes"
+	},
+	["stop"] = {
+		["function"] = stop,
+		["tooltip"] = "stops infection game",
+	},
+	["game length set"] = {
+		["function"] = gameLength,
+		["tooltip"] = "sets the length of the round",
+		["usage"] = "minutes"
+	},
+	["reset"] = {
+		["function"] = reset,
+		["tooltip"] = "resets randomizer weights",
+	},
+	["greenFadeDist set"] = {
+		["function"] = greenFadeDist,
+		["tooltip"] = "resets randomizer weights",
+		["usage"] = "minutes"
+	},
+	["ColorPulse toggle"] = {
+		["function"] = ColorPulse,
+		["tooltip"] = "resets randomizer weights",
+	},
+	["infector tint toggle"] = {
+		["function"] = infectorTint,
+		["tooltip"] = "resets randomizer weights",
+	},
+	["filterIntensity set"] = {
+		["function"] = filterIntensity,
+		["tooltip"] = "resets randomizer weights",
+		["usage"] = "0 to 1"
+	},
+}
+
 --Chat Commands
 function outbreakChatMessageHandler(sender_id, sender_name, message)
-	if message == "/outbreak join" or string.find(message,"/outbreak join %d+") then
-		local number = tonumber(string.sub(message,14,10000))
-		local playerid = number or sender_id
-		local playername = MP.GetPlayerName(playerid)
-		includedPlayers[playerid] = true
-		MP.SendChatMessage(sender_id,"enabled for "..playername.."")
-		return 1
-		
-	elseif message == "/outbreak leave" or string.find(message,"/outbreak leave %d+") then
-		local number = tonumber(string.sub(message,15,10000))
-		local playerid = number or sender_id
-		local playername = MP.GetPlayerName(playerid)
-		includedPlayers[playerid] = nil
-		MP.SendChatMessage(sender_id,"enabled for "..playername.."")
-		return 1
-		
-	elseif message == "/outbreak start" or string.find(message,"/outbreak start %d+") then
-		local number = tonumber(string.sub(message,15,10000))
-		if not gameState.gameRunning then
-			local gameLenght = number or roundLenght
-			gameSetup()
+	local msgStart = string.match(message,"[^%s]+")
+	print(msgStart)
+	if msgStart == "/outbreak" or msgStart == "/infection" then
+		print(string.len(msgStart)+2)
+		local commandstringraw = string.sub(message,string.len(msgStart)+2)
+		local commandstring, variable = string.match(commandstringraw,"^(.+) (.+)$")
+		local commandStringFinal = commandstring or commandstringraw
+		print(commandStringFinal)
+
+		if commands[commandStringFinal] then
+			commands[commandStringFinal]["function"](sender_id, sender_name, message ,variable)
 		else
-			MP.SendChatMessage(sender_id,"gamestart failed, game already running")
-		end
-
-		return 1
-		
-	elseif message == "/outbreak stop" then
-		if gameState.gameRunning then
-			gameEnd("manual")
-		else
-			MP.SendChatMessage(sender_id,"gamestop failed, game not running")
-		end
-
-		return 1
-
-    elseif string.find(message,"/outbreak game length set %d+") then
-		local value = tonumber(string.sub(message,27,10000))
-		if value then
-			roundLenght = value*60
-			MP.SendChatMessage(sender_id,"set game length to "..value.."")
-			
-		else
-			MP.SendChatMessage(sender_id,"setting roundLenght failed, no value")
+			MP.SendChatMessage(sender_id,"command not found, type /infection help for a list of infection commands")
 		end
 		return 1
-
-    elseif string.find(message,"/outbreak greenFadeDist set %d+") then
-		local value = tonumber(string.sub(message,29,10000))
-		if value then
-			defaultGreenFadeDistance = value
-			if gameState.settings then
-				gameState.settings.GreenFadeDistance = defaultGreenFadeDistance
-			end
-			MP.SendChatMessage(sender_id,"set greenFadeDist to "..value.."")
-			
-		else
-			MP.SendChatMessage(sender_id,"setting greenFadeDist failed, no value")
-		end
+	elseif string.sub(message,1,5) == "/help" then
+		MP.SendChatMessage(sender_id,"type /infection help for a list of infection commands")
 		return 1
-
-    elseif string.find(message,"/outbreak ColorPulse toggle") then
-		if defaultColorPulse then
-			defaultColorPulse = false
-			MP.SendChatMessage(sender_id,"setting ColorPulse to false")
-		else
-			defaultColorPulse = true
-			MP.SendChatMessage(sender_id,"setting ColorPulse to true")
-		end
-		if gameState.settings then
-			gameState.settings.ColorPulse = defaultColorPulse
-		end
-		return 1
-
-    elseif string.find(message,"/outbreak infector tint toggle") then
-		if defaultInfectorTint then
-			defaultInfectorTint = false
-			MP.SendChatMessage(sender_id,"setting infector tint to false")
-		else
-			defaultInfectorTint = true
-			MP.SendChatMessage(sender_id,"setting infector tint to true")
-		end
-		if gameState.settings then
-			gameState.settings.infectorTint = defaultInfectorTint
-		end
-		return 1
-
-    elseif string.find(message,"/outbreak filterIntensity set %d+") then
-		local value = tonumber(string.sub(message,31,10000))
-		if value then
-			defaultDistancecolor = value
-			if gameState.settings then
-				gameState.settings.distancecolor = defaultDistancecolor
-			end 
-			MP.SendChatMessage(sender_id,"set filterIntensity to "..value.."")
-			
-		else
-			MP.SendChatMessage(sender_id,"setting filterIntensity failed, no value")
-		end
-		return 1
-
-    elseif string.find(message,"/outbreak reset") then
-			weightingArray = {}
-		return 1
-		
-    elseif message == "/outbreak help" then
-		MP.SendChatMessage(sender_id,"/outbreak start")
-		MP.SendChatMessage(sender_id,"/outbreak stop")
-		MP.SendChatMessage(sender_id,"/outbreak game length set (minutes))")
-		MP.SendChatMessage(sender_id,"/outbreak reset (resets randomizer)")
-
-		MP.SendChatMessage(sender_id,"/outbreak greenFadeDist set (meters)")
-		MP.SendChatMessage(sender_id,"/outbreak ColorPulse toggle")
-		MP.SendChatMessage(sender_id,"/outbreak infector tint toggle")
-		MP.SendChatMessage(sender_id,"/outbreak filterIntensity set (0 to 1)")
-		
-	--	excludedPlayers[]
-		return 1
-    else
-        return 0
 	end
 end
 

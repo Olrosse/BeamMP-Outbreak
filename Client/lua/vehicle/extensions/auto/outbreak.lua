@@ -19,7 +19,8 @@ local gamestate = {players = {}, settings = {}}
 
 local function setGameState(data)
 	--local data = jsonDecode(data)
-	gamestate = data
+	M.gamestate = data
+	--dump(gamestate)
 end
 
 local function mergeTable(table,gamestateTable)
@@ -36,8 +37,10 @@ end
 
 local function updateGameState(data)
 	mergeTable(data,gamestate)
+	M.gamestate = gamestate
 	dump(gamestate)
 end
+
 
 M.setGameState = setGameState
 M.updateGameState = updateGameState

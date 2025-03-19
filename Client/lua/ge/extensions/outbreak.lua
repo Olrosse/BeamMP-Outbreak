@@ -1,5 +1,5 @@
-local M = {}
 
+local M = {}
 local floor = math.floor
 local mod = math.fmod
 
@@ -7,7 +7,7 @@ local gamestate = {players = {}, settings = {}}
 
 local defaultGreenFadeDistance = 20
 
---extensions.unload("outbreak") extensions.load("outbreak")
+--extensions.unload("outbreak") extensions.load("outbreak") extensions.reload("outbreak")
 
 --local actionTemplate = core_input_actionFilter.getActionTemplates()
 --
@@ -18,19 +18,111 @@ local defaultGreenFadeDistance = 20
 --dump(blockedActions,"teste")
 
 local function seconds_to_days_hours_minutes_seconds(total_seconds) --modified code from https://stackoverflow.com/questions/45364628/lua-4-script-to-convert-seconds-elapsed-to-days-hours-minutes-seconds
+    if not total_seconds then return end
+	local time_days     = floor(total_seconds / 86400)
+    local time_hours    = floor(mod(total_seconds, 86400) / 3600)
     local time_minutes  = floor(mod(total_seconds, 3600) / 60)
     local time_seconds  = floor(mod(total_seconds, 60))
-    --if (time_minutes < 10) then
-    --    time_minutes = "0" .. time_minutes
-    --end
-    if (time_seconds < 10) and time_minutes > 0 then
-        time_seconds = "0" .. time_seconds
-    end
-	if time_minutes > 0 then
-    	return time_minutes .. ":" .. time_seconds
-	else
-    	return time_seconds
+
+	if time_days == 0 then
+		time_days = nil
 	end
+    if time_hours == 0 then
+        time_hours = nil
+    end
+	if time_minutes == 0 then
+		time_minutes = nil
+	end
+	if time_seconds == 0 then
+		time_seconds = nil
+	end
+    return time_days ,time_hours , time_minutes , time_seconds
+end
+
+local function gameStarting(time)
+	local days, hours , minutes , seconds = seconds_to_days_hours_minutes_seconds(time)
+	local amount = 0
+	if days then
+		amount = amount + 1
+	end
+	if hours then
+		amount = amount + 1
+	end
+	if minutes then
+		amount = amount + 1
+	end
+	if seconds then
+		amount = amount + 1
+	end
+	if days then
+		amount = amount - 1
+		if days == 1 then
+			if amount > 1 then
+				days = ""..days.." day, "
+			elseif amount == 1 then
+				days = ""..days.." day and "
+			elseif amount == 0 then
+				days = ""..days.." day "
+			end
+		else
+			if amount > 1 then
+				days = ""..days.." days, "
+			elseif amount == 1 then
+				days = ""..days.." days and "
+			elseif amount == 0 then
+				days = ""..days.." days "
+			end
+		end
+	end
+	if hours then
+		amount = amount - 1
+		if hours == 1 then
+			if amount > 1 then
+				hours = ""..hours.." hour, "
+			elseif amount == 1 then
+				hours = ""..hours.." hour and "
+			elseif amount == 0 then
+				hours = ""..hours.." hour "
+			end
+		else
+			if amount > 1 then
+				hours = ""..hours.." hours, "
+			elseif amount == 1 then
+				hours = ""..hours.." hours and "
+			elseif amount == 0 then
+				hours = ""..hours.." hours "
+			end
+		end
+	end
+	if minutes then
+		amount = amount - 1
+		if minutes == 1 then
+			if amount > 1 then
+				minutes = ""..minutes.." minute, "
+			elseif amount == 1 then
+				minutes = ""..minutes.." minute and "
+			elseif amount == 0 then
+				minutes = ""..minutes.." minute "
+			end
+		else
+			if amount > 1 then
+				minutes = ""..minutes.." minutes, "
+			elseif amount == 1 then
+				minutes = ""..minutes.." minutes and "
+			elseif amount == 0 then
+				minutes = ""..minutes.." minutes "
+			end
+		end
+	end
+	if seconds then
+		if seconds == 1 then
+			seconds = ""..seconds.." second "
+		else
+			seconds = ""..seconds.." seconds "
+		end
+	end
+
+	return days, hours , minutes , seconds
 end
 
 local function distance(vec1, vec2)
@@ -55,6 +147,10 @@ local function resetInfected(data)
 	end
 
 	MPVehicleGE.hideNicknames(false)
+
+	if vignetteShaderAPI then
+		vignetteShaderAPI.resetVignette()
+	end
 	scenetree["PostEffectCombinePassObject"]:setField("enableBlueShift", 0,0)
 	scenetree["PostEffectCombinePassObject"]:setField("blueShiftColor", 0,"0 0 0")
 
@@ -86,6 +182,9 @@ end
 local function mergeTable(table,gamestateTable)
 	for variableName,value in pairs(table) do
 		if type(value) == "table" then
+			if not gamestateTable[variableName] then
+				gamestateTable[variableName] = {}
+			end
 			mergeTable(value,gamestateTable[variableName])
 		elseif value == "remove" then
 			gamestateTable[variableName] = nil
@@ -98,6 +197,7 @@ end
 local function updateGameState(data)
 
 	mergeTable(jsonDecode(data),gamestate)
+	be:queueAllObjectLua("if outbreak then outbreak.setGameState("..serialize(gamestate)..") end")
 
 	-- In game messages
 	local time = 0
@@ -105,6 +205,12 @@ local function updateGameState(data)
 	if gamestate.time then time = gamestate.time-1 end
 
 	local txt = ""
+	
+	if gamestate.gameRunning and time and time == -4 then
+		if TriggerServerEvent then 
+			TriggerServerEvent("infection_clientReady","nil")
+		end
+	end
 
 	if gamestate.gameRunning and time and time == 0 then
 		MPVehicleGE.hideNicknames(true)
@@ -112,13 +218,13 @@ local function updateGameState(data)
 		--if gamestate.settings and gamestate.settings.mode = "competitive" then
 	    --	core_input_actionFilter.setGroup('vehicleTeleporting', actionTemplate.vehicleTeleporting)
 		--	core_input_actionFilter.addAction(0, 'vehicleTeleporting', true)
---
+
 	    	--core_input_actionFilter.setGroup('vehicleMenues', actionTemplate.vehicleMenues)
 			--core_input_actionFilter.addAction(0, 'vehicleMenues', true)
-----
+
 	    	--core_input_actionFilter.setGroup('freeCam', actionTemplate.freeCam)
 			--core_input_actionFilter.addAction(0, 'freeCam', true)
---
+
 	    --	core_input_actionFilter.setGroup('resetPhysics', actionTemplate.resetPhysics)
 		--	core_input_actionFilter.addAction(0, 'resetPhysics', true)
 		--end
@@ -126,16 +232,99 @@ local function updateGameState(data)
 
 	if time and time < 0 then
 		txt = "Game starts in "..math.abs(time).." seconds"
+		if vignetteShaderAPI and not vignetteShaderAPI.isEnabled() then
+			vignetteShaderAPI.setEnabled(true)
+		end
 	elseif gamestate.gameRunning and not gamestate.gameEnding and time or gamestate.endtime and (gamestate.endtime - time) > 9 then
-		--local InfectedPlayers = gamestate.InfectedPlayers
-		--local nonInfectedPlayers = gamestate.nonInfectedPlayers
 
-		local timeLeft = seconds_to_days_hours_minutes_seconds(gamestate.roundLenght - time)
-		txt = "Infected "..gamestate.InfectedPlayers.."/"..gamestate.playerCount..", Time Left "..timeLeft..""
+		local days, hours , minutes , seconds = seconds_to_days_hours_minutes_seconds(gamestate.roundLenght - time)
+		local amount = 0
+		if days then
+			amount = amount + 1
+			if not hours then
+				hours = 0
+			end
+		end
+		if hours then
+			amount = amount + 1
+			if not minutes then
+				minutes = 0
+			end
+		end
+		if minutes then
+			amount = amount + 1
+			if not seconds then
+				seconds = 0
+			end
+		end
+		if seconds then
+			amount = amount + 1
+		end
+
+		if days then
+			if amount > 0 then
+				days = ""..days.."."
+			end
+		end
+
+		if hours then
+			amount = amount - 1
+			if amount > 0 then
+				if days and hours < 10 then
+					hours = "0"..hours..""
+				end
+				hours = ""..hours..":"
+			end
+		end
+
+		if minutes then
+			amount = amount - 1
+			if amount > 0 then
+				if hours and minutes < 10 then
+					minutes = "0"..minutes..""
+				end
+				minutes = ""..minutes..":"
+			end
+		end
+
+		if seconds and minutes then
+			if seconds < 10 then
+				seconds = "0"..seconds..""
+			end
+		end
+
+		txt = "Infected "..gamestate.InfectedPlayers.."/"..gamestate.playerCount..", Time Left "..(days or "")..""..(hours or "")..""..(minutes or "")..""..(seconds or "")..""
+
 	elseif time and gamestate.endtime and (gamestate.endtime - time) < 7 then
 
-		--local InfectedPlayers = gamestate.InfectedPlayers
-		--local nonInfectedPlayers = gamestate.nonInfectedPlayers
+		for player, data in pairs(gamestate.players) do
+			local txt = "Stats for "..player..""
+			local stats = data.stats
+			local skipPlayer = true
+			if stats.survivedTime then
+				local days, hours , minutes , seconds = gameStarting(stats.survivedTime)
+				txt = ""..txt.."\n  Time Survived : "..(days or "")..""..(hours or "")..""..(minutes or "")..""..(seconds or "")..""
+				skipPlayer = false
+			end
+
+			if stats.infecter then
+				txt = ""..txt.."\n Was infected by : "..stats.infecter..""
+				skipPlayer = false
+			end
+
+			if stats.infected then
+				if stats.infected == 1 then
+					txt = ""..txt.."\n Has infected : "..stats.infected.." Player"
+				skipPlayer = false
+				elseif stats.infected ~= 0 then
+					txt = ""..txt.."\n Has infected : "..stats.infected.." Players"
+				skipPlayer = false
+				end
+			end
+			if not skipPlayer then
+				guihooks.message({txt = txt}, 30, "outbreak."..player.."")
+			end
+		end
 
 		local timeLeft = gamestate.endtime - time
 		txt = "Infected "..gamestate.InfectedPlayers.."/"..gamestate.playerCount..", Colors reset in "..math.abs(timeLeft-1).." seconds"
@@ -156,13 +345,18 @@ end
 
 local function sendContact(vehID,localVehID)
 	if not MPVehicleGE or MPCoreNetwork and not MPCoreNetwork.isMPSession() then return end
+	if not gamestate.gameRunning then return end -- temp fix for console spam when a game hasn't been ran yet
+
 	local LocalvehPlayerName = MPVehicleGE.getNicknameMap()[localVehID]
 	local vehPlayerName = MPVehicleGE.getNicknameMap()[vehID]
-	if gamestate.players[vehPlayerName] and gamestate.players[LocalvehPlayerName] then
-		if gamestate.players[vehPlayerName].infected ~= gamestate.players[LocalvehPlayerName].infected then
-    		local serverVehID = MPVehicleGE.getServerVehicleID(vehID)
-			local remotePlayerID, vehicleID = string.match(serverVehID, "(%d+)-(%d+)")
-			if TriggerServerEvent then TriggerServerEvent("onContact", remotePlayerID) end
+	if gamestate and gamestate.gameRunning then
+		if gamestate.players[vehPlayerName] and gamestate.players[LocalvehPlayerName] then
+			if gamestate.players[vehPlayerName].infected ~= gamestate.players[LocalvehPlayerName].infected and not gamestate.players[vehPlayerName].contacted then
+    			gamestate.players[vehPlayerName].contacted = true
+				local serverVehID = MPVehicleGE.getServerVehicleID(vehID)
+				local remotePlayerID, vehicleID = string.match(serverVehID, "(%d+)-(%d+)")
+				if TriggerServerEvent then TriggerServerEvent("onContact", remotePlayerID) end
+			end
 		end
 	end
 end
@@ -176,6 +370,7 @@ local function recieveInfected(data)
 end
 
 local function onVehicleSwitched(oldID,ID)
+	if not gamestate.gameRunning then return end
 	local curentOwnerName = MPConfig.getNickname()
 	if ID and MPVehicleGE.getVehicleByGameID(ID) then
 		curentOwnerName = MPVehicleGE.getVehicleByGameID(ID).ownerName
@@ -232,11 +427,11 @@ local function color(player,vehicle,dt)
 				end
 				--dump(k,colorfade,greenfade,transition,colortimer,gamestate.settings)
 
-		
+	
 				veh.color = ColorF(vehicle.originalColor.x*colorfade,(vehicle.originalColor.y*colorfade) + (color*greenfade), vehicle.originalColor.z*colorfade, vehicle.originalColor.w):asLinear4F()
 				veh.colorPalette0 = ColorF(vehicle.originalcolorPalette0.x*colorfade,(vehicle.originalcolorPalette0.y*colorfade) + (color*greenfade), vehicle.originalcolorPalette0.z*colorfade, vehicle.originalcolorPalette0.w):asLinear4F()
 				veh.colorPalette1 = ColorF(vehicle.originalcolorPalette1.x*colorfade,(vehicle.originalcolorPalette1.y*colorfade) + (color*greenfade), vehicle.originalcolorPalette1.z*colorfade, vehicle.originalcolorPalette1.w):asLinear4F()
-			
+		
 				vehicle.colortimer = colortimer + (dt*2.6)
 				if transition > 0 then
 					vehicle.transition = math.max(0,transition - dt)
@@ -251,11 +446,11 @@ local function color(player,vehicle,dt)
 				local colorfade = vehicle.colorfade or 1
 				local greenfade = vehicle.greenfade or 0
 				--dump(k,colorfade,greenfade,transition,vehicle.colortimer)
-			
+		
 				veh.color = ColorF(vehicle.originalColor.x*colorfade,(vehicle.originalColor.y*colorfade) + (color*greenfade), vehicle.originalColor.z*colorfade, vehicle.originalColor.w):asLinear4F()
 				veh.colorPalette0 = ColorF(vehicle.originalcolorPalette0.x*colorfade,(vehicle.originalcolorPalette0.y*colorfade) + (color*greenfade), vehicle.originalcolorPalette0.z*colorfade, vehicle.originalcolorPalette0.w):asLinear4F()
 				veh.colorPalette1 = ColorF(vehicle.originalcolorPalette1.x*colorfade,(vehicle.originalcolorPalette1.y*colorfade) + (color*greenfade), vehicle.originalcolorPalette1.z*colorfade, vehicle.originalcolorPalette1.w):asLinear4F()
-			
+		
 				vehicle.colorfade = math.min(1,colorfade + dt)
 				vehicle.greenfade = math.max(0,greenfade - dt)
 				vehicle.colortimer = 1.6
@@ -267,8 +462,9 @@ local function color(player,vehicle,dt)
 	end
 end
 
-local function onPreRender(dt)
+local fade = 0
 
+local function onPreRender(dt)
 	if MPCoreNetwork and not MPCoreNetwork.isMPSession() then return end
 	if not gamestate.gameRunning then return end
 
@@ -308,26 +504,46 @@ local function onPreRender(dt)
 	if gamestate.settings then
 		tempSetting = gamestate.settings.GreenFadeDistance
 	end
-	distancecolor = math.min(0.4,1 -(closestInfected/(tempSetting or defaultGreenFadeDistance)))
+	distancecolor = math.min(1,1 -(closestInfected/(tempSetting or defaultGreenFadeDistance)))
 
 	--if distancecolor > 0 then
 	--	core_input_actionFilter.setGroup('vehicleTeleporting', actionTemplate.vehicleTeleporting)
 	--	core_input_actionFilter.addAction(0, 'vehicleTeleporting', true)
---
+
 	--	core_input_actionFilter.setGroup('resetPhysics', actionTemplate.resetPhysics)
 	--	core_input_actionFilter.addAction(0, 'resetPhysics', true)
 	--else
 	--	core_input_actionFilter.addAction(0, 'vehicleTeleporting', false)
 	---	core_input_actionFilter.addAction(0, 'resetPhysics', false)
 	--end
-	
-	--dump(distancecolor)
-	if gamestate.settings and gamestate.settings.infectorTint and gamestate.players[curentOwnerName] and gamestate.players[curentOwnerName].infected then
-		distancecolor = gamestate.settings.distancecolor or 0.5
+
+	if vignetteShaderAPI then
+		vignetteShaderAPI.setColor(Point4F(0, 0.12, 0,1))
 	end
-	--dump(distancecolor)
-	scenetree["PostEffectCombinePassObject"]:setField("enableBlueShift", 0,distancecolor)
-	scenetree["PostEffectCombinePassObject"]:setField("blueShiftColor", 0,"0 1 0")
+	if gamestate.settings and gamestate.settings.infectorTint and gamestate.players[curentOwnerName] and gamestate.players[curentOwnerName].infected then
+		distancecolor = gamestate.settings.distancecolor or 0
+		if vignetteShaderAPI then
+			distancecolor = distancecolor + 0.2
+			vignetteShaderAPI.setColor(Point4F(0, 0.15, 0,1))
+		end
+	end
+
+	if (gamestate.time -gamestate.endtime) > 6 then
+		fade = math.min(1,fade + dt)
+	elseif not gamestate.gameEnding or (gamestate.endtime - gamestate.time) > 1 then
+		fade = math.max(0,fade - dt)
+	end
+
+	if vignetteShaderAPI then
+		if not vignetteShaderAPI.isEnabled() then
+			vignetteShaderAPI.setEnabled(true)
+		end
+		vignetteShaderAPI.setInnerRadius((0.8 - math.max(0,distancecolor*fade)))
+		vignetteShaderAPI.setOuterRadius((1.8 - math.max(0,distancecolor*fade))) --math.max(0,1 -(distancecolor*2))
+	else
+		scenetree["PostEffectCombinePassObject"]:setField("enableBlueShift", 0,distancecolor*0.7*fade)
+		scenetree["PostEffectCombinePassObject"]:setField("blueShiftColor", 0,"0 1 0")
+	end
 end
 
 local function onResetGameplay(id)
@@ -346,7 +562,7 @@ if MPGameNetwork then AddEventHandler("resetInfected", resetInfected) end
 if MPGameNetwork then AddEventHandler("recieveGameState", recieveGameState) end
 if MPGameNetwork then AddEventHandler("updateGameState", updateGameState) end
 
---requestGameState()
+requestGameState()
 
 M.requestGameState = requestGameState
 M.sendContact = sendContact
@@ -356,5 +572,8 @@ M.resetInfected = resetInfected
 M.onExtensionUnloaded = onExtensionUnloaded
 M.onResetGameplay = onResetGameplay
 --M.gamestate = gamestate
+
+
+M.onInit = function() setExtensionUnloadMode(M, "manual") end
 
 return M

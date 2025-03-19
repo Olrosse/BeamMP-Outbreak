@@ -1,2 +1,2 @@
-load("outbreak")
-registerCoreModule("outbreak")
+extensions.load("vignetteShaderAPI")
+extensions.load("outbreak")

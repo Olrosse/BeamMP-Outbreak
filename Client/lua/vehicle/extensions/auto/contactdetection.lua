@@ -15,7 +15,6 @@ local carHeight = obj:getInitialHeight()
 local vehiclerotation = quat(obj:getRotation())
 local vehiclePosition = obj:getPosition() - (positionoffset:rotated(vehiclerotation))
 
-local mapObjects = mapmgr.getObjects()
 local vehiclemap = {}
 
 local function distance(vec1, vec2)
@@ -84,6 +83,8 @@ local function sendData(data)
 end
 
 local function updateGFX(dt)
+	if not outbreak then return end
+	if outbreak.gamestate and not outbreak.gamestate.gameRunning then return end
 
 	if carWidth == 0 then
 		carWidth = obj:getInitialWidth()
@@ -123,8 +124,7 @@ local function updateGFX(dt)
 					local distance = distance(vehiclePosition, pos)
 					if distance < ((vehiclemap[vehID].carLength+carLength)/2)*1.1 then
 						detectcolor = color(0,255,0,200)
-						--outbreak.sendContact(323899)
-						vehiclemap[vehID].ColState = true
+						obj:queueGameEngineLua("if outbreak then outbreak.sendContact(" .. tostring(vehID) .. ","..tostring(vehicleID)..") end")
 					end
 				end
 			else
@@ -133,16 +133,6 @@ local function updateGFX(dt)
 		end
 	end
 
-	for ID,vehData in pairs(vehiclemap) do -- TODO: make a proper hit detection that doesn't send duplicates
-		--dump(vehData.lastColState, vehData.ColState)
-		if not vehData.lastColState and vehData.ColState then
-			obj:queueGameEngineLua("if outbreak then outbreak.sendContact(" .. tostring(ID) .. ","..tostring(vehicleID)..") end")
-			--dump("collision")
-		end
-
-		vehData.lastColState = vehData.ColState
-		vehData.ColState = false
-	end
 	--local detectcolor = color(0,255,0,200)
 
    --drawDebug:drawSphere(0.1 , obj:getPosition(), color(0,255,0,200))
