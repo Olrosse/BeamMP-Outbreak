@@ -19,10 +19,10 @@ local defaultColorPulse = false -- if the car color should pulse between the car
 local defaultInfectorTint = true -- if the infector should have a green tint
 local defaultDistancecolor = 0.5 -- max intensity of the green filter
 
-MP.RegisterEvent("infection_clientReady","infection_clientReady")
-MP.RegisterEvent("onContactRecieve","onContact")
-MP.RegisterEvent("requestGameState","requestGameState")
-MP.TriggerClientEvent(-1, "resetInfected", "data")
+MP.RegisterEvent("outbreak_clientReady","clientReady")
+MP.RegisterEvent("outbreak_onContactRecieve","onContact")
+MP.RegisterEvent("outbreak_requestGameState","requestGameState")
+MP.TriggerClientEvent(-1, "outbreak_resetInfected", "data")
 
 local function seconds_to_days_hours_minutes_seconds(total_seconds) --modified code from https://stackoverflow.com/questions/45364628/lua-4-script-to-convert-seconds-elapsed-to-days-hours-minutes-seconds
 	local time_days		= floor(total_seconds / 86400)
@@ -75,11 +75,11 @@ local function updateClients()
 	compareTable(gameState,tempTable,lastState)
 
 	if tempTable and next(tempTable) ~= nil then
-		MP.TriggerClientEventJson(-1, "updateGameState", tempTable)
+		MP.TriggerClientEventJson(-1, "outbreak_updateGameState", tempTable)
 	end
 end
 
-function infection_clientReady(localPlayerID, data)
+function clientReady(localPlayerID, data)
 	local playerName = MP.GetPlayerName(localPlayerID)
 	if playerName then
 		local player = gameState.players[playerName]
@@ -90,7 +90,7 @@ function infection_clientReady(localPlayerID, data)
 end
 
 function requestGameState(localPlayerID)
-	MP.TriggerClientEventJson(localPlayerID, "recieveGameState", gameState)
+	MP.TriggerClientEventJson(localPlayerID, "outbreak_recieveGameState", gameState)
 end
 
 local function infectPlayer(playerName,force)
@@ -109,10 +109,10 @@ local function infectPlayer(playerName,force)
 			MP.SendChatMessage(-1,"server has infected "..playerName.."!")
 		end
 
-		MP.TriggerClientEvent(-1, "recieveInfected", playerName)
+		MP.TriggerClientEvent(-1, "outbreak_recieveInfected", playerName)
 
 		updateClients()
-		--MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
+		--MP.TriggerClientEventJson(-1, "outbreak_recieveGameState", gameState)
 	end
 end
 
@@ -170,8 +170,8 @@ local function gameSetup()
 			player.remoteContact = false
 			gameState.players[Player] = player
 			playerCount = playerCount + 1
-			--MP.TriggerClientEvent(-1, "addPlayers", tostring(k))
-			MP.TriggerClientEvent(-1, "addPlayers", Player)
+			--MP.TriggerClientEvent(-1, "outbreak_addPlayers", tostring(k))
+			MP.TriggerClientEvent(-1, "outbreak_addPlayers", Player)
 		end
 	end
 
@@ -192,7 +192,7 @@ local function gameSetup()
 	gameState.gameEnding = false
 	gameState.gameEnded = false
 
-	MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
+	MP.TriggerClientEventJson(-1, "outbreak_recieveGameState", gameState)
 end
 
 local function gameEnd(reason)
@@ -252,7 +252,7 @@ local function infectRandomPlayer()
 				else
 					MP.SendChatMessage(-1,"no infected players, "..playername.." has been randomly infected!")
 				end
-				MP.TriggerClientEvent(-1, "recieveInfected", playername)
+				MP.TriggerClientEvent(-1, "outbreak_recieveInfected", playername)
 				gameState.oneInfected = true
 				gameState.InfectedPlayers = gameState.InfectedPlayers + 1
 				gameState.nonInfectedPlayers = gameState.nonInfectedPlayers - 1
@@ -265,7 +265,7 @@ local function infectRandomPlayer()
 		gameState.everyoneInfected = true
 	end
 
-	MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
+	MP.TriggerClientEventJson(-1, "outbreak_recieveGameState", gameState)
 end
 
 local function gameStarting()
@@ -391,7 +391,7 @@ local function gameRunningLoop()
 			if player.localContact and player.remoteContact and not player.infected then
 				player.infected = true
 				MP.SendChatMessage(-1,""..playername.." has been infected!")
-				MP.TriggerClientEvent(-1, "recieveInfected", playername)
+				MP.TriggerClientEvent(-1, "outbreak_recieveInfected", playername)
 			elseif player.stats and gameState.time > 5 and not player.infected then
 				if	not player.stats.survivedTime then
 					player.stats.survivedTime = 5
@@ -426,7 +426,7 @@ local function gameRunningLoop()
 		gameState.endtime = gameState.time + 10
 	elseif gameState.gameEnding and gameState.time == gameState.endtime then
 		gameState.gameRunning = false
-		--MP.TriggerClientEvent(-1, "resetInfected", "data")
+		--MP.TriggerClientEvent(-1, "outbreak_resetInfected", "data")
 
 		gameState = {}
 		gameState.players = {}
@@ -435,7 +435,7 @@ local function gameRunningLoop()
 		gameState.gameEnding = false
 		gameState.gameEnded = true
 
-		--MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
+		--MP.TriggerClientEventJson(-1, "outbreak_recieveGameState", gameState)
 	end
 	if gameState.gameRunning then
 		gameState.time = gameState.time + 1
@@ -660,8 +660,8 @@ function onVehicleDeleted(playerID,vehicleID)
 	end
 end
 
-MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
-MP.TriggerClientEvent(-1, "resetInfected", "data")
+MP.TriggerClientEventJson(-1, "outbreak_recieveGameState", gameState)
+MP.TriggerClientEvent(-1, "outbreak_resetInfected", "data")
 
 MP.RegisterEvent("onChatMessage", "outbreakChatMessageHandler")
 MP.RegisterEvent("onPlayerDisconnect", "onPlayerDisconnect")

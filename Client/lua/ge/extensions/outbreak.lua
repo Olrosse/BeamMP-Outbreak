@@ -208,7 +208,7 @@ local function updateGameState(data)
 	
 	if gamestate.gameRunning and time and time == -4 then
 		if TriggerServerEvent then 
-			TriggerServerEvent("infection_clientReady","nil")
+			TriggerServerEvent("outbreak_clientReady","nil")
 		end
 	end
 
@@ -340,7 +340,7 @@ local function updateGameState(data)
 end
 
 local function requestGameState()
-	if TriggerServerEvent then TriggerServerEvent("requestGameState","nil") end
+	if TriggerServerEvent then TriggerServerEvent("outbreak_requestGameState","nil") end
 end
 
 local function sendContact(vehID,localVehID)
@@ -557,10 +557,10 @@ local function onExtensionUnloaded()
 	resetInfected()
 end
 
-if MPGameNetwork then AddEventHandler("recieveInfected", recieveInfected) end
-if MPGameNetwork then AddEventHandler("resetInfected", resetInfected) end
-if MPGameNetwork then AddEventHandler("recieveGameState", recieveGameState) end
-if MPGameNetwork then AddEventHandler("updateGameState", updateGameState) end
+if MPGameNetwork then AddEventHandler("outbreak_recieveInfected", recieveInfected) end
+if MPGameNetwork then AddEventHandler("outbreak_resetInfected", resetInfected) end
+if MPGameNetwork then AddEventHandler("outbreak_recieveGameState", recieveGameState) end
+if MPGameNetwork then AddEventHandler("outbreak_updateGameState", updateGameState) end
 
 requestGameState()
 
