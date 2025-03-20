@@ -2,25 +2,8 @@ local M = {}
 
 local gamestate = {players = {}, settings = {}}
 
---local originalstartRecovery = recovery.startRecovering
---local originalstopRecovery = recovery.stopRecovering()
---
---local function newStartRecovering(useAltMode)
---	if gamestate.gameRunning then return end
---	originalstartRecovery(useAltMode)
---end
---local function newStopRecovering()
---	if gamestate.gameRunning then return end
---	originalstopRecovery()
---end
---
---recovery.startRecovering = newStartRecovering
---recovery.stopRecovering = newStopRecovering
-
 local function setGameState(data)
-	--local data = jsonDecode(data)
 	M.gamestate = data
-	--dump(gamestate)
 end
 
 local function mergeTable(table,gamestateTable)
@@ -38,7 +21,6 @@ end
 local function updateGameState(data)
 	mergeTable(data,gamestate)
 	M.gamestate = gamestate
-	dump(gamestate)
 end
 
 

@@ -18,25 +18,25 @@ local defaultGreenFadeDistance = 20
 --dump(blockedActions,"teste")
 
 local function seconds_to_days_hours_minutes_seconds(total_seconds) --modified code from https://stackoverflow.com/questions/45364628/lua-4-script-to-convert-seconds-elapsed-to-days-hours-minutes-seconds
-    if not total_seconds then return end
-	local time_days     = floor(total_seconds / 86400)
-    local time_hours    = floor(mod(total_seconds, 86400) / 3600)
-    local time_minutes  = floor(mod(total_seconds, 3600) / 60)
-    local time_seconds  = floor(mod(total_seconds, 60))
+	if not total_seconds then return end
+	local time_days		= floor(total_seconds / 86400)
+	local time_hours	= floor(mod(total_seconds, 86400) / 3600)
+	local time_minutes	= floor(mod(total_seconds, 3600) / 60)
+	local time_seconds	= floor(mod(total_seconds, 60))
 
 	if time_days == 0 then
 		time_days = nil
 	end
-    if time_hours == 0 then
-        time_hours = nil
-    end
+	if time_hours == 0 then
+		time_hours = nil
+	end
 	if time_minutes == 0 then
 		time_minutes = nil
 	end
 	if time_seconds == 0 then
 		time_seconds = nil
 	end
-    return time_days ,time_hours , time_minutes , time_seconds
+	return time_days ,time_hours , time_minutes , time_seconds
 end
 
 local function gameStarting(time)
@@ -216,16 +216,16 @@ local function updateGameState(data)
 		MPVehicleGE.hideNicknames(true)
 
 		--if gamestate.settings and gamestate.settings.mode = "competitive" then
-	    --	core_input_actionFilter.setGroup('vehicleTeleporting', actionTemplate.vehicleTeleporting)
+		--	core_input_actionFilter.setGroup('vehicleTeleporting', actionTemplate.vehicleTeleporting)
 		--	core_input_actionFilter.addAction(0, 'vehicleTeleporting', true)
 
-	    	--core_input_actionFilter.setGroup('vehicleMenues', actionTemplate.vehicleMenues)
+			--core_input_actionFilter.setGroup('vehicleMenues', actionTemplate.vehicleMenues)
 			--core_input_actionFilter.addAction(0, 'vehicleMenues', true)
 
-	    	--core_input_actionFilter.setGroup('freeCam', actionTemplate.freeCam)
+			--core_input_actionFilter.setGroup('freeCam', actionTemplate.freeCam)
 			--core_input_actionFilter.addAction(0, 'freeCam', true)
 
-	    --	core_input_actionFilter.setGroup('resetPhysics', actionTemplate.resetPhysics)
+		--	core_input_actionFilter.setGroup('resetPhysics', actionTemplate.resetPhysics)
 		--	core_input_actionFilter.addAction(0, 'resetPhysics', true)
 		--end
 	end
@@ -237,7 +237,7 @@ local function updateGameState(data)
 		end
 	elseif gamestate.gameRunning and not gamestate.gameEnding and time or gamestate.endtime and (gamestate.endtime - time) > 9 then
 
-		local days, hours , minutes , seconds = seconds_to_days_hours_minutes_seconds(gamestate.roundLenght - time)
+		local days, hours , minutes , seconds = seconds_to_days_hours_minutes_seconds(gamestate.roundLength - time)
 		local amount = 0
 		if days then
 			amount = amount + 1
@@ -303,7 +303,7 @@ local function updateGameState(data)
 			local skipPlayer = true
 			if stats.survivedTime then
 				local days, hours , minutes , seconds = gameStarting(stats.survivedTime)
-				txt = ""..txt.."\n  Time Survived : "..(days or "")..""..(hours or "")..""..(minutes or "")..""..(seconds or "")..""
+				txt = ""..txt.."\n	Time Survived : "..(days or "")..""..(hours or "")..""..(minutes or "")..""..(seconds or "")..""
 				skipPlayer = false
 			end
 
@@ -352,7 +352,7 @@ local function sendContact(vehID,localVehID)
 	if gamestate and gamestate.gameRunning then
 		if gamestate.players[vehPlayerName] and gamestate.players[LocalvehPlayerName] then
 			if gamestate.players[vehPlayerName].infected ~= gamestate.players[LocalvehPlayerName].infected and not gamestate.players[vehPlayerName].contacted then
-    			gamestate.players[vehPlayerName].contacted = true
+				gamestate.players[vehPlayerName].contacted = true
 				local serverVehID = MPVehicleGE.getServerVehicleID(vehID)
 				local remotePlayerID, vehicleID = string.match(serverVehID, "(%d+)-(%d+)")
 				if TriggerServerEvent then TriggerServerEvent("onContact", remotePlayerID) end

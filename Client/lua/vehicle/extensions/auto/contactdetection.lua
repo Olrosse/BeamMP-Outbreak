@@ -94,9 +94,9 @@ local function updateGFX(dt)
 	end
 
 	if v.mpVehicleType == "R" then return end
-	
-    local vehicles = mapmgr.getObjects()
-	
+
+	local vehicles = mapmgr.getObjects()
+
 	local localVehData = vehicles[vehicleID]
 	if not localVehData then return end
 
@@ -107,10 +107,9 @@ local function updateGFX(dt)
 	vehiclerotation = quatFromDir(dirVec*-1,dirVecUp)
 	vehiclePosition = vehicles[vehicleID].pos - ((carCenter):rotated(vehiclerotation))
 
-	local detectcolor = color(255,0,0,200)
+	--local detectcolor = color(255,0,0,200)
 
 	if next(mapmgr.objectCollisionIds) then
-		local contact = 0
 		for _,vehID in pairs(mapmgr.objectCollisionIds) do
 			if vehiclemap[vehID] then
 				local vehData = vehicles[vehID]
@@ -123,7 +122,7 @@ local function updateGFX(dt)
 
 					local distance = distance(vehiclePosition, pos)
 					if distance < ((vehiclemap[vehID].carLength+carLength)/2)*1.1 then
-						detectcolor = color(0,255,0,200)
+						--detectcolor = color(0,255,0,200)
 						obj:queueGameEngineLua("if outbreak then outbreak.sendContact(" .. tostring(vehID) .. ","..tostring(vehicleID)..") end")
 					end
 				end
@@ -135,17 +134,17 @@ local function updateGFX(dt)
 
 	--local detectcolor = color(0,255,0,200)
 
-   --drawDebug:drawSphere(0.1 , obj:getPosition(), color(0,255,0,200))
-   --drawDebug:drawSphere(0.1 , obj:getPosition() - (carCenter):rotated(quat(obj:getRotation())), detectcolor)
-   --drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x,carCenter.y+(carLength/2),carCenter.z)):rotated(quat(obj:getRotation())), detectcolor)
-   --drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x,carCenter.y-(carLength/2),carCenter.z)):rotated(quat(obj:getRotation())), detectcolor)
+	--drawDebug:drawSphere(0.1 , obj:getPosition(), color(0,255,0,200))
+	--drawDebug:drawSphere(0.1 , obj:getPosition() - (carCenter):rotated(quat(obj:getRotation())), detectcolor)
+	--drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x,carCenter.y+(carLength/2),carCenter.z)):rotated(quat(obj:getRotation())), detectcolor)
+	--drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x,carCenter.y-(carLength/2),carCenter.z)):rotated(quat(obj:getRotation())), detectcolor)
 
-   --drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x,carCenter.y,carCenter.z+(carHeight/2))):rotated(quat(obj:getRotation())), detectcolor)
-   --drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x,carCenter.y,carCenter.z-(carHeight/2))):rotated(quat(obj:getRotation())), detectcolor)
-   --
-   --drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x+(carWidth/2),carCenter.y,carCenter.z)):rotated(quat(obj:getRotation())), detectcolor)
-   --drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x-(carWidth/2),carCenter.y,carCenter.z)):rotated(quat(obj:getRotation())), detectcolor)
-    --dump(obj:getPosition() - (positionoffset-carCenter):rotated(quat(obj:getRotation())))
+	--drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x,carCenter.y,carCenter.z+(carHeight/2))):rotated(quat(obj:getRotation())), detectcolor)
+	--drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x,carCenter.y,carCenter.z-(carHeight/2))):rotated(quat(obj:getRotation())), detectcolor)
+	--
+	--drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x+(carWidth/2),carCenter.y,carCenter.z)):rotated(quat(obj:getRotation())), detectcolor)
+	--drawDebug:drawSphere(0.1 , obj:getPosition() - (vec3(carCenter.x-(carWidth/2),carCenter.y,carCenter.z)):rotated(quat(obj:getRotation())), detectcolor)
+	--dump(obj:getPosition() - (positionoffset-carCenter):rotated(quat(obj:getRotation())))
 end
 
 M.setPosOffset = setPosOffset

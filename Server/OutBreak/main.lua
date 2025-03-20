@@ -3,7 +3,7 @@ local floor = math.floor
 local mod = math.fmod
 
 local gameState = {players = {}}
-local laststate = gameState
+local lastState = gameState
 local weightingArray = {}
 
 gameState.everyoneInfected = false
@@ -13,10 +13,10 @@ gameState.gameEnding = false
 local includedPlayers = {} --TODO make these do something
 local excludedPlayers = {} --TODO make these do something
 
-local roundLenght = 5*60 -- lenght of the game in seconds
+local roundLength = 5*60 -- length of the game in seconds
 local defaultGreenFadeDistance = 100 -- how close the infector has to be for the screen to start to turn green
 local defaultColorPulse = false -- if the car color should pulse between the car color and green
-local defaultInfectorTint = true -- if the infecor should have a green tint
+local defaultInfectorTint = true -- if the infector should have a green tint
 local defaultDistancecolor = 0.5 -- max intensity of the green filter
 
 MP.RegisterEvent("infection_clientReady","infection_clientReady")
@@ -25,46 +25,46 @@ MP.RegisterEvent("requestGameState","requestGameState")
 MP.TriggerClientEvent(-1, "resetInfected", "data")
 
 local function seconds_to_days_hours_minutes_seconds(total_seconds) --modified code from https://stackoverflow.com/questions/45364628/lua-4-script-to-convert-seconds-elapsed-to-days-hours-minutes-seconds
-    local time_days     = floor(total_seconds / 86400)
-    local time_hours    = floor(mod(total_seconds, 86400) / 3600)
-    local time_minutes  = floor(mod(total_seconds, 3600) / 60)
-    local time_seconds  = floor(mod(total_seconds, 60))
+	local time_days		= floor(total_seconds / 86400)
+	local time_hours	= floor(mod(total_seconds, 86400) / 3600)
+	local time_minutes	= floor(mod(total_seconds, 3600) / 60)
+	local time_seconds	= floor(mod(total_seconds, 60))
 
 	if time_days == 0 then
 		time_days = nil
 	end
-    if time_hours == 0 then
-        time_hours = nil
-    end
+	if time_hours == 0 then
+		time_hours = nil
+	end
 	if time_minutes == 0 then
 		time_minutes = nil
 	end
 	if time_seconds == 0 then
 		time_seconds = nil
 	end
-    return time_days ,time_hours , time_minutes , time_seconds
+	return time_days ,time_hours , time_minutes , time_seconds
 end
 
-local function compareTable(gameState,tempTable,laststate)
+local function compareTable(gameState,tempTable,lastState)
 	for varableName,varable in pairs(gameState) do
 		if type(varable) == "table" then
-			if not laststate[varableName] then
-				laststate[varableName] = {}
+			if not lastState[varableName] then
+				lastState[varableName] = {}
 			end
 			if not tempTable[varableName] then
 				tempTable[varableName] = {}
 			end
-			compareTable(gameState[varableName],tempTable[varableName],laststate[varableName])
+			compareTable(gameState[varableName],tempTable[varableName],lastState[varableName])
 			if type(tempTable[varableName]) == "table" and next(tempTable[varableName]) == nil then
 				tempTable[varableName] = nil
 			end
 		elseif varable == "remove" then
 			tempTable[varableName] = gameState[varableName]
-			laststate[varableName] = nil
+			lastState[varableName] = nil
 			gameState[varableName] = nil
-		elseif laststate[varableName] ~= varable then
+		elseif lastState[varableName] ~= varable then
 			tempTable[varableName] = gameState[varableName]
-			laststate[varableName] = gameState[varableName]
+			lastState[varableName] = gameState[varableName]
 		end
 	end
 end
@@ -72,7 +72,7 @@ end
 local function updateClients()
 	local tempTable = {}
 
-	compareTable(gameState,tempTable,laststate)
+	compareTable(gameState,tempTable,lastState)
 
 	if tempTable and next(tempTable) ~= nil then
 		MP.TriggerClientEventJson(-1, "updateGameState", tempTable)
@@ -184,7 +184,7 @@ local function gameSetup()
 	gameState.InfectedPlayers = 0
 	gameState.nonInfectedPlayers = playerCount
 	gameState.time = -5
-	gameState.roundLenght = roundLenght
+	gameState.roundLength = roundLength
 	gameState.endtime = -1
 	gameState.oneInfected = false
 	gameState.everyoneInfected = false
@@ -218,7 +218,6 @@ local function gameEnd(reason)
 	else
 		MP.SendChatMessage(-1,"Game stopped for uknown reason,"..nonInfectedCount.." survived and "..infectedCount.." got infected")
 	end
-	--print(gameState)
 end
 
 local function infectRandomPlayer()
@@ -262,17 +261,15 @@ local function infectRandomPlayer()
 			weightingArray[playername].infections = weightingArray[playername].infections + 100
 		end
 	end
-	--print(infectedCount , gameState.playerCount , nonInfectedCount)
 	if gameState.InfectedPlayers >= gameState.playerCount and gameState.nonInfectedPlayers == 0 then
 		gameState.everyoneInfected = true
 	end
 
 	MP.TriggerClientEventJson(-1, "recieveGameState", gameState)
-	--print(randomID,weightingArray)
 end
 
 local function gameStarting()
-	local days, hours , minutes , seconds = seconds_to_days_hours_minutes_seconds(roundLenght)
+	local days, hours , minutes , seconds = seconds_to_days_hours_minutes_seconds(roundLength)
 	local amount = 0
 	if days then
 		amount = amount + 1
@@ -372,7 +369,7 @@ local function gameRunningLoop()
 				if unresponsiveString == "" then
 					unresponsiveString = unresponsiveString .. playername
 				else
-					unresponsiveString = unresponsiveString  .. "," .. playername
+					unresponsiveString = unresponsiveString	.. "," .. playername
 				end
 			end
 		end
@@ -396,7 +393,7 @@ local function gameRunningLoop()
 				MP.SendChatMessage(-1,""..playername.." has been infected!")
 				MP.TriggerClientEvent(-1, "recieveInfected", playername)
 			elseif player.stats and gameState.time > 5 and not player.infected then
-				if  not player.stats.survivedTime then
+				if	not player.stats.survivedTime then
 					player.stats.survivedTime = 5
 				end
 				player.stats.survivedTime = player.stats.survivedTime + 1
@@ -421,7 +418,7 @@ local function gameRunningLoop()
 		end
 	end
 
-	if not gameState.gameEnding and gameState.time == gameState.roundLenght then
+	if not gameState.gameEnding and gameState.time == gameState.roundLength then
 		gameEnd("time")
 		gameState.endtime = gameState.time + 10
 	elseif not gameState.gameEnding and gameState.everyoneInfected == true then
@@ -430,7 +427,6 @@ local function gameRunningLoop()
 	elseif gameState.gameEnding and gameState.time == gameState.endtime then
 		gameState.gameRunning = false
 		--MP.TriggerClientEvent(-1, "resetInfected", "data")
-		--print(gameState.gameEnding ,gameState.time ,gameState.endtime)
 
 		gameState = {}
 		gameState.players = {}
@@ -446,7 +442,6 @@ local function gameRunningLoop()
 	end
 
 	updateClients()
-	--print(gameState)
 end
 
 autoStart = false
@@ -459,7 +454,6 @@ function timer()
 		gameRunningLoop()
 	elseif autoStart and MP.GetPlayerCount() > -1 then
 		autoStartTimer = autoStartTimer + 1
-		--print(autoStartTimer)
 		if autoStartTimer >= autoStartWaitInSeconds then
 			autoStartTimer = 0
 			gameSetup()
@@ -524,11 +518,11 @@ end
 
 local function gameLength(sender_id, sender_name, message, value)
 	if value then
-		roundLenght = value*60
+		roundLength = value*60
 		MP.SendChatMessage(sender_id,"set game length to "..value.."")
 
 	else
-		MP.SendChatMessage(sender_id,"setting roundLenght failed, no value")
+		MP.SendChatMessage(sender_id,"setting roundLength failed, no value")
 	end
 end
 
@@ -582,7 +576,6 @@ local function filterIntensity(sender_id, sender_name, message, value)
 			gameState.settings.distancecolor = defaultDistancecolor
 		end
 		MP.SendChatMessage(sender_id,"set filterIntensity to "..value.."")
-		
 	else
 		MP.SendChatMessage(sender_id,"setting filterIntensity failed, no value")
 	end
@@ -634,13 +627,10 @@ commands = {
 --Chat Commands
 function outbreakChatMessageHandler(sender_id, sender_name, message)
 	local msgStart = string.match(message,"[^%s]+")
-	print(msgStart)
 	if msgStart == "/outbreak" or msgStart == "/infection" then
-		print(string.len(msgStart)+2)
 		local commandstringraw = string.sub(message,string.len(msgStart)+2)
 		local commandstring, variable = string.match(commandstringraw,"^(.+) (.+)$")
 		local commandStringFinal = commandstring or commandstringraw
-		print(commandStringFinal)
 
 		if commands[commandStringFinal] then
 			commands[commandStringFinal]["function"](sender_id, sender_name, message ,variable)
