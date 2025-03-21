@@ -137,7 +137,7 @@ local function distance(vec1, vec2)
 	return math.sqrt((vec2.x-vec1.x)^2 + (vec2.y-vec1.y)^2 + (vec2.z-vec1.z)^2)
 end
 
-local function resetInfected(data)
+local function resetInfected()
 	for k,serverVehicle in pairs(MPVehicleGE.getVehicles()) do
 		local ID = serverVehicle.gameVehicleID
 		local vehicle = be:getObjectByID(ID)
@@ -386,6 +386,7 @@ end
 local function sendContact(vehID,localVehID)
 	if not MPVehicleGE or MPCoreNetwork and not MPCoreNetwork.isMPSession() then return end
 	if not gamestate.gameRunning then return end -- temp fix for console spam when a game hasn't been ran yet
+	if not MPVehicleGE.isOwn(localVehID) then return end
 
 	local LocalvehPlayerName = MPVehicleGE.getNicknameMap()[localVehID]
 	local vehPlayerName = MPVehicleGE.getNicknameMap()[vehID]
@@ -640,6 +641,7 @@ M.onExtensionUnloaded = onExtensionUnloaded
 M.onResetGameplay = onResetGameplay
 M.onVehicleSpawned = onVehicleSpawned
 M.onVehicleColorChanged = onVehicleColorChanged
+M.gamestate = gamestate
 
 
 M.onInit = function() setExtensionUnloadMode(M, "manual") end
