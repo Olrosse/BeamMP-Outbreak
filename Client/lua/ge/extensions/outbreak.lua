@@ -171,16 +171,15 @@ end
 
 local function recieveGameState(data)
 	local data = jsonDecode(data)
-
-	if not gamestate.gameRunning and data.gameRunning then
-		for k,vehicle in pairs(MPVehicleGE.getVehicles()) do
-			local ID = vehicle.gameVehicleID
-			local veh = be:getObjectByID(ID)
-			if veh then
-				vehicle.originalColor = be:getObjectByID(ID).color
-				vehicle.originalcolorPalette0 = be:getObjectByID(ID).colorPalette0
-				vehicle.originalcolorPalette1 = be:getObjectByID(ID).colorPalette1
-			end
+	gamestate = data
+	M.gamestate = gamestate
+	
+	gamestate.vehiclesOwners = {}
+	for k,vehicle in pairs(MPVehicleGE.getVehicles()) do
+		local ID = vehicle.gameVehicleID
+		local veh = be:getObjectByID(ID)
+		if veh then
+			gamestate.vehiclesOwners[ID] = vehicle.ownerName
 		end
 	end
 	gamestate = data
@@ -424,6 +423,19 @@ local function onVehicleSwitched(oldID,ID)
 	end
 end
 
+local function onVehicleSpawned(VehicleID)
+	local veh = be:getObjectByID(VehicleID)
+	if veh then
+		local vehicle = MPVehicleGE.getVehicleByGameID(VehicleID)
+		if vehicle then
+			vehicle.originalColor = be:getObjectByID(VehicleID).colorPalette1
+			vehicle.originalcolorPalette0 = be:getObjectByID(VehicleID).colorPalette1
+			vehicle.originalcolorPalette1 = be:getObjectByID(VehicleID).colorPalette1
+		end
+		veh:queueLuaCommand("if outbreak then outbreak.setGameState("..serialize(gamestate)..") end")
+	end
+end
+
 local distancecolor = -1
 
 local function nametags(curentOwnerName,player,vehicle)
@@ -595,6 +607,19 @@ local function onResetGameplay(id)
 	--end
 end
 
+local function onVehicleColorChanged(vehID,index,paint)
+	local vehicle = MPVehicleGE.getVehicleByGameID(vehID)
+	if vehicle then
+		if index == 1 then
+			vehicle.originalColor = ColorF(paint.baseColor[1],paint.baseColor[2],paint.baseColor[3],paint.baseColor[4]):asLinear4F()
+		elseif index == 2 then
+			vehicle.originalcolorPalette0 = ColorF(paint.baseColor[1],paint.baseColor[2],paint.baseColor[3],paint.baseColor[4]):asLinear4F()
+		elseif index == 3 then
+			vehicle.originalcolorPalette1 = ColorF(paint.baseColor[1],paint.baseColor[2],paint.baseColor[3],paint.baseColor[4]):asLinear4F()
+		end
+	end
+end
+
 local function onExtensionUnloaded()
 	resetInfected()
 end
@@ -613,7 +638,8 @@ M.onVehicleSwitched = onVehicleSwitched
 M.resetInfected = resetInfected
 M.onExtensionUnloaded = onExtensionUnloaded
 M.onResetGameplay = onResetGameplay
---M.gamestate = gamestate
+M.onVehicleSpawned = onVehicleSpawned
+M.onVehicleColorChanged = onVehicleColorChanged
 
 
 M.onInit = function() setExtensionUnloadMode(M, "manual") end
