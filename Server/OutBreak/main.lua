@@ -246,6 +246,7 @@ local function infectRandomPlayer()
 				gameState.players[playername].remoteContact = true
 				gameState.players[playername].localContact = true
 				gameState.players[playername].infected = true
+				gameState.players[playername].firstInfected = true
 
 				if gameState.time == 5 then
 					MP.SendChatMessage(-1,""..playername.." is first infected!")

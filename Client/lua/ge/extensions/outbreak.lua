@@ -16,6 +16,14 @@ local defaultGreenFadeDistance = 20
 --local blockedActions = core_input_actionFilter.createActionTemplate({"vehicleTeleporting", "vehicleMenues", "physicsControls", "aiControls", "vehicleSwitching", "funStuff"})
 
 --dump(blockedActions,"teste")
+local function getStat(name)
+	return gameplay_statistic.metricGet(name) and gameplay_statistic.metricGet(name).value or 0
+end
+
+local function setNewMaxStat(name, value)
+	local stat = getStat(name)
+	if value > stat then gameplay_statistic.metricSet(name, value) end
+end
 
 local function seconds_to_days_hours_minutes_seconds(total_seconds) --modified code from https://stackoverflow.com/questions/45364628/lua-4-script-to-convert-seconds-elapsed-to-days-hours-minutes-seconds
 	if not total_seconds then return end
@@ -307,6 +315,11 @@ local function updateGameState(data)
 				skipPlayer = false
 			end
 
+			if data.firstInfected then
+				txt = ""..txt.."\n Was first infected"
+				skipPlayer = false
+			end
+
 			if stats.infecter then
 				txt = ""..txt.."\n Was infected by : "..stats.infecter..""
 				skipPlayer = false
@@ -335,6 +348,34 @@ local function updateGameState(data)
 	end
 	--\n
 	if gamestate.gameEnded then
+		local yourName = MPConfig.getNickname()
+		for playerName, playerData in pairs(gamestate.players) do
+			local stats = playerData.stats
+			if stats then
+				if playerName == yourName then
+					gameplay_statistic.metricAdd("Infection/GamesPlayed", 1)
+					if stats.infected and stats.infected > 0 then
+						gameplay_statistic.metricAdd("Infection/TotalInfections", stats.infected)
+						setNewMaxStat("Infection/MostInfectionsInOneGame", stats.infected)
+					end
+					if stats.survivedTime and stats.survivedTime > 0 then
+						gameplay_statistic.metricAdd("Infection/TotalTimeSurvived.time", stats.survivedTime)
+						setNewMaxStat("Infection/LongestTimeSurvived.time", stats.survivedTime)
+					end
+					if playerData.infecter then
+						gameplay_statistic.metricAdd("Infection/InfectedBy/"..playerData.infecter.."", 1)
+					end
+					if playerData.firstInfected then
+						gameplay_statistic.metricAdd("Infection/firstInfected", 1)
+					end
+				else
+					if playerData.infecter == yourName then
+						gameplay_statistic.metricAdd("Infection/InfectedOthers/"..playerName.."", 1)
+					end
+					gameplay_statistic.metricAdd("Infection/TimesPlayedWith/"..playerName.."", 1)
+				end
+			end
+		end
 		resetInfected()
 	end
 end
