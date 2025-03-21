@@ -434,7 +434,7 @@ local function nametags(curentOwnerName,player,vehicle)
 		if not veh then return end
 		local height = veh:getInitialHeight()
 		vehPos.z = vehPos.z + (height * 0.5) + 0.2
-		debugDrawer:drawTextAdvanced(vehPos, String(" Survivor "), ColorF(1,1,1,1), true, false, ColorI(255*0.7,128*0.7,0,200))
+		debugDrawer:drawTextAdvanced(vehPos, String(" Survivor "), ColorF(1,1,1,1), true, false, ColorI(200,50,50,255))
 	end
 end
 
