@@ -1,8 +1,8 @@
-require("client/postFx/vignette")
+require("client/postFx/outbreakVignette")
 
 local M = {}
 
-local vignettePostFX = scenetree.findObject("VignettePostFX")
+local vignettePostFX = scenetree.findObject("OutbreakVignettePostFX")
 
 local enabled = false
 
