@@ -585,7 +585,7 @@ end
 commands = {
 	["help"] = {
 		["function"] = help,
-		["tooltip"] = "lists all commands"
+		["tooltip"] = "Displays List of available commands"
 	},
 	["start"] = {
 		["function"] = start,
@@ -596,32 +596,32 @@ commands = {
 		["function"] = stop,
 		["tooltip"] = "stops infection game",
 	},
+	["reset"] = {
+		["function"] = reset,
+		["tooltip"] = "resets randomizer weights",
+	},
 	["game length set"] = {
 		["function"] = gameLength,
 		["tooltip"] = "sets the length of the round",
 		["usage"] = "minutes"
 	},
-	["reset"] = {
-		["function"] = reset,
-		["tooltip"] = "resets randomizer weights",
-	},
 	["greenFadeDist set"] = {
 		["function"] = greenFadeDist,
-		["tooltip"] = "resets randomizer weights",
-		["usage"] = "minutes"
-	},
-	["ColorPulse toggle"] = {
-		["function"] = ColorPulse,
-		["tooltip"] = "resets randomizer weights",
-	},
-	["infector tint toggle"] = {
-		["function"] = infectorTint,
-		["tooltip"] = "resets randomizer weights",
+		["tooltip"] = "Adjusts how close in meters an infected car needs to be for the screen to start going green",
+		["usage"] = "meters"
 	},
 	["filterIntensity set"] = {
 		["function"] = filterIntensity,
-		["tooltip"] = "resets randomizer weights",
+		["tooltip"] = "Sets how intense the vignetting effect is",
 		["usage"] = "0 to 1"
+	},
+	["ColorPulse toggle"] = {
+		["function"] = ColorPulse,
+		["tooltip"] = "Enabling this makes the infected cars pulse between green and the original color of the car",
+	},
+	["infector tint toggle"] = {
+		["function"] = infectorTint,
+		["tooltip"] = "This toggles on or off the vignetting effect on infected players",
 	},
 }
 
