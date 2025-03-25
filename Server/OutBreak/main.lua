@@ -141,7 +141,7 @@ function onContact(localPlayerID, data)
 	end
 end
 
-local function gameSetup()
+local function gameSetup(time)
 	gameState = {}
 	gameState.players = {}
 	gameState.settings = {
@@ -184,7 +184,7 @@ local function gameSetup()
 	gameState.InfectedPlayers = 0
 	gameState.nonInfectedPlayers = playerCount
 	gameState.time = -5
-	gameState.roundLength = roundLength
+	gameState.roundLength = time or roundLength
 	gameState.endtime = -1
 	gameState.oneInfected = false
 	gameState.everyoneInfected = false
@@ -270,7 +270,7 @@ local function infectRandomPlayer()
 end
 
 local function gameStarting()
-	local days, hours , minutes , seconds = seconds_to_days_hours_minutes_seconds(roundLength)
+	local days, hours , minutes , seconds = seconds_to_days_hours_minutes_seconds(gameState.roundLength)
 	local amount = 0
 	if days then
 		amount = amount + 1
@@ -503,6 +503,7 @@ end
 
 local function start(sender_id, sender_name, message, value)
 	if not gameState.gameRunning then
+		if value then value = value*60 end
 		gameSetup(value)
 	else
 		MP.SendChatMessage(sender_id,"gamestart failed, game already running")
