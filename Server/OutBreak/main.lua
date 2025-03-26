@@ -587,20 +587,27 @@ local function filterIntensity(sender_id, sender_name, message, value)
 	end
 end
 
-local function teleportToggle(sender_id, sender_name, message, value)
+local function resetToggle(sender_id, sender_name, message, value)
 	disableResetsWhenMoving = not disableResetsWhenMoving
-	MP.SendChatMessage(sender_id,"Teleports are now restricted")
+	if gameState.settings then
+		gameState.settings.disableResetsWhenMoving = disableResetsWhenMoving
+	end
+	if disableResetsWhenMoving then
+		MP.SendChatMessage(sender_id,"Resetting is now restricted")
+	else
+		MP.SendChatMessage(sender_id,"Resetting is now allowed")
+	end
 end
 
-local function setTeleportSpeed(sender_id, sender_name, message, value)
+local function setResetSpeed(sender_id, sender_name, message, value)
 	if value then
 		maxResetMovingSpeed = value
 		if gameState.settings then
 			gameState.settings.maxResetMovingSpeed = maxResetMovingSpeed
 		end
-		MP.SendChatMessage(sender_id,"set Max Teleport Speed to "..value.."")
+		MP.SendChatMessage(sender_id,"set Max Reset Speed to "..value.."")
 	else
-		MP.SendChatMessage(sender_id,"setting Max Teleport Speed failed, no value")
+		MP.SendChatMessage(sender_id,"setting Max Reset Speed failed, no value")
 	end
 end
 
@@ -645,13 +652,13 @@ commands = {
 		["function"] = infectorTint,
 		["tooltip"] = "This toggles on or off the vignetting effect on infected players",
 	},
-	["teleportAtSpeedAllowed toggle"] = {
-		["function"] = teleportToggle,
+	["ResetAtSpeedAllowed toggle"] = {
+		["function"] = resetToggle,
 		["tooltip"] = "This toggles whether players can reset at speed",
 	},
-	["MaxTeleportSpeed set"] = {
-		["function"] = setTeleportSpeed,
-		["tooltip"] = "This toggles whether players can reset at speed",
+	["MaxResetSpeed set"] = {
+		["function"] = setResetSpeed,
+		["tooltip"] = "Sets the highest speed where resets are allowed",
 	},
 }
 
