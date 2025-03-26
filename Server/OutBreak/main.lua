@@ -660,11 +660,11 @@ function outbreakChatMessageHandler(sender_id, sender_name, message)
 	local msgStart = string.match(message,"[^%s]+")
 	if msgStart == "/outbreak" or msgStart == "/infection" then
 		local commandstringraw = string.sub(message,string.len(msgStart)+2)
-		local commandstring, variable = string.match(commandstringraw,"^(.+) (.+)$")
+		local commandstring, variable = string.match(commandstringraw,"^(.+) (%d*%.?%d*)$")
 		local commandStringFinal = commandstring or commandstringraw
 
 		if commands[commandStringFinal] then
-			commands[commandStringFinal]["function"](sender_id, sender_name, message ,variable)
+			commands[commandStringFinal]["function"](sender_id, sender_name, message ,tonumber(variable))
 		else
 			MP.SendChatMessage(sender_id,"command not found, type /infection help for a list of infection commands")
 		end
