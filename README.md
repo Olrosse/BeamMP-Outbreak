@@ -21,6 +21,8 @@ This is a recreation of the Infection game mode from Dirt 3 for BeamMP
 1. ```/infection filterIntensity set ``` Sets how intense the vignetting effect is
 1. ```/infection ColorPulse toggle``` Enabling this makes the infected cars pulse between green and the original color of the car
 1. ```/infection infector tint toggle``` This toggles on or off the vignetting effect on infected players
+1. ```/infection ResetAtSpeedAllowed toggle``` This toggles whether players can reset at speed
+1. ```/infection MaxResetSpeed set``` Sets the highest speed where resets are allowed
 
 ## Special thanks to
 
