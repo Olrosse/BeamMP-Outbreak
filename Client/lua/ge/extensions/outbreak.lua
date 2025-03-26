@@ -520,6 +520,7 @@ local function onPreRender(dt)
 	if not gamestate.gameRunning then return end
 
 	local currentVehID = be:getPlayerVehicleID(0)
+	local currentVeh = be:getObjectByID(currentVehID)
 	local curentOwnerName = MPConfig.getNickname()
 
 	if currentVehID and MPVehicleGE.getVehicleByGameID(currentVehID) then
@@ -536,11 +537,10 @@ local function onPreRender(dt)
 				nametags(curentOwnerName,player,vehicle)
 				color(player,vehicle,dt)
 				if gamestate.players[curentOwnerName] and currentVehID and not gamestate.players[curentOwnerName].infected and gamestate.players[vehicle.ownerName].infected and currentVehID ~= vehicle.gameVehicleID then
-					local myVeh = be:getObjectByID(currentVehID)
 					local veh = be:getObjectByID(vehicle.gameVehicleID)
-					if veh and myVeh then
+					if veh and currentVeh then
 						if gamestate.players[vehicle.ownerName].infected then
-							local distance = distance(myVeh:getPosition(),veh:getPosition())
+							local distance = distance(currentVeh:getPosition(),veh:getPosition())
 							if distance < closestInfected then
 								closestInfected = distance
 							end
