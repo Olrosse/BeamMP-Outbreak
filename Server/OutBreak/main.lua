@@ -18,6 +18,8 @@ local defaultGreenFadeDistance = 100 -- how close the infector has to be for the
 local defaultColorPulse = false -- if the car color should pulse between the car color and green
 local defaultInfectorTint = true -- if the infector should have a green tint
 local defaultDistancecolor = 0.5 -- max intensity of the green filter
+local disableResetsWhenMoving = true
+local maxResetMovingSpeed = 2
 
 MP.RegisterEvent("outbreak_clientReady","clientReady")
 MP.RegisterEvent("outbreak_onContactRecieve","onContact")
@@ -148,7 +150,9 @@ local function gameSetup(time)
 		GreenFadeDistance = defaultGreenFadeDistance,
 		ColorPulse = defaultColorPulse,
 		infectorTint = defaultInfectorTint,
-		distancecolor = defaultDistancecolor
+		distancecolor = defaultDistancecolor,
+		disableResetsWhenMoving = disableResetsWhenMoving,
+		maxResetMovingSpeed = maxResetMovingSpeed
 		}
 	local playerCount = 0
 	for ID,Player in pairs(MP.GetPlayers()) do
@@ -583,6 +587,23 @@ local function filterIntensity(sender_id, sender_name, message, value)
 	end
 end
 
+local function teleportToggle(sender_id, sender_name, message, value)
+	disableResetsWhenMoving = not disableResetsWhenMoving
+	MP.SendChatMessage(sender_id,"Teleports are now restricted")
+end
+
+local function setTeleportSpeed(sender_id, sender_name, message, value)
+	if value then
+		maxResetMovingSpeed = value
+		if gameState.settings then
+			gameState.settings.maxResetMovingSpeed = maxResetMovingSpeed
+		end
+		MP.SendChatMessage(sender_id,"set Max Teleport Speed to "..value.."")
+	else
+		MP.SendChatMessage(sender_id,"setting Max Teleport Speed failed, no value")
+	end
+end
+
 commands = {
 	["help"] = {
 		["function"] = help,
@@ -623,6 +644,14 @@ commands = {
 	["infector tint toggle"] = {
 		["function"] = infectorTint,
 		["tooltip"] = "This toggles on or off the vignetting effect on infected players",
+	},
+	["teleportAtSpeedAllowed toggle"] = {
+		["function"] = teleportToggle,
+		["tooltip"] = "This toggles whether players can reset at speed",
+	},
+	["MaxTeleportSpeed set"] = {
+		["function"] = setTeleportSpeed,
+		["tooltip"] = "This toggles whether players can reset at speed",
 	},
 }
 

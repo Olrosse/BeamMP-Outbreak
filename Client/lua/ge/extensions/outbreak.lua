@@ -9,13 +9,8 @@ local defaultGreenFadeDistance = 20
 
 --extensions.unload("outbreak") extensions.load("outbreak") extensions.reload("outbreak")
 
---local actionTemplate = core_input_actionFilter.getActionTemplates()
---
---core_input_actionFilter.setGroup('competitive', actionTemplate.vehicleTeleporting)
+local blockedActions = {"dropPlayerAtCamera", "dropPlayerAtCameraNoReset", "recover_vehicle", "recover_vehicle_alt", "recover_to_last_road", "reload_vehicle", "reload_all_vehicles", "loadHome", "saveHome", "reset_all_physics" ,"reset_physics"}
 
---local blockedActions = core_input_actionFilter.createActionTemplate({"vehicleTeleporting", "vehicleMenues", "physicsControls", "aiControls", "vehicleSwitching", "funStuff"})
-
---dump(blockedActions,"teste")
 local function getStat(name)
 	return gameplay_statistic.metricGet(name) and gameplay_statistic.metricGet(name).value or 0
 end
@@ -514,6 +509,26 @@ local function color(player,vehicle,dt)
 end
 
 local fade = 0
+local lastVehPos = vec3()
+local moveTimer = 0
+
+local function checkForMovement(currentVehID,currentVeh,dt)
+	local vehPos = vec3(be:getObjectOOBBCenterXYZ(currentVehID))
+	local vehVel = currentVeh:getVelocity()
+	if distance(vehPos,lastVehPos) > 1 then
+		moveTimer = 5
+		lastVehPos = vehPos
+	else
+		moveTimer = math.max(0,moveTimer - dt)
+	end
+	if vehVel:length() < (gamestate.settings.maxResetMovingSpeed or 2) or moveTimer < 0 then
+		core_input_actionFilter.setGroup('noResetsInfection', blockedActions)
+		core_input_actionFilter.addAction(0, 'noResetsInfection', false)
+	else
+		core_input_actionFilter.setGroup('noResetsInfection', blockedActions)
+		core_input_actionFilter.addAction(0, 'noResetsInfection', true)
+	end
+end
 
 local function onPreRender(dt)
 	if MPCoreNetwork and not MPCoreNetwork.isMPSession() then return end
@@ -525,6 +540,12 @@ local function onPreRender(dt)
 
 	if currentVehID and MPVehicleGE.getVehicleByGameID(currentVehID) then
 		curentOwnerName = MPVehicleGE.getVehicleByGameID(currentVehID).ownerName
+	end
+
+	if gamestate.settings and gamestate.settings.disableResetsWhenMoving then
+		if MPVehicleGE.isOwn(currentVehID) then
+			checkForMovement(currentVehID,currentVeh,dt)
+		end
 	end
 
 	local closestInfected = 100000000
@@ -595,13 +616,6 @@ local function onPreRender(dt)
 		scenetree["PostEffectCombinePassObject"]:setField("enableBlueShift", 0,distancecolor*0.7*fade)
 		scenetree["PostEffectCombinePassObject"]:setField("blueShiftColor", 0,"0 1 0")
 	end
-end
-
-local function onResetGameplay(id)
-	--dump(distancecolor , be:getPlayerVehicleID(0) , id )
-	--if distancecolor > 0 and id == 0 then
-	--	guihooks.message({txt = "Infector to close, cannot Reset"}, 1, "outbreak.reset")
-	--end
 end
 
 local function onVehicleColorChanged(vehID,index,paint)
