@@ -429,9 +429,9 @@ local function onVehicleSpawned(VehicleID)
 	if veh then
 		local vehicle = MPVehicleGE.getVehicleByGameID(VehicleID)
 		if vehicle then
-			vehicle.originalColor = be:getObjectByID(VehicleID).colorPalette1
-			vehicle.originalcolorPalette0 = be:getObjectByID(VehicleID).colorPalette1
-			vehicle.originalcolorPalette1 = be:getObjectByID(VehicleID).colorPalette1
+			vehicle.originalColor = veh.color
+			vehicle.originalcolorPalette0 = veh.colorPalette0
+			vehicle.originalcolorPalette1 = veh.colorPalette1
 		end
 		veh:queueLuaCommand("if outbreak then outbreak.setGameState("..serialize(gamestate)..") end")
 	end
