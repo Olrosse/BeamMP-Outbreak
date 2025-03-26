@@ -157,6 +157,8 @@ local function resetInfected()
 	scenetree["PostEffectCombinePassObject"]:setField("enableBlueShift", 0,0)
 	scenetree["PostEffectCombinePassObject"]:setField("blueShiftColor", 0,"0 0 0")
 
+	core_input_actionFilter.setGroup('noResetsInfection', blockedActions)
+	core_input_actionFilter.addAction(0, 'noResetsInfection', false)
 
 	--core_input_actionFilter.addAction(0, 'vehicleTeleporting', false)
 	--core_input_actionFilter.addAction(0, 'vehicleMenues', false)
@@ -542,7 +544,7 @@ local function onPreRender(dt)
 		curentOwnerName = MPVehicleGE.getVehicleByGameID(currentVehID).ownerName
 	end
 
-	if gamestate.settings and gamestate.settings.disableResetsWhenMoving then
+	if gamestate.settings and gamestate.settings.disableResetsWhenMoving == true then
 		if MPVehicleGE.isOwn(currentVehID) then
 			checkForMovement(currentVehID,currentVeh,dt)
 		end
