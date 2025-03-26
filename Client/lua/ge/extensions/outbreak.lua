@@ -519,7 +519,7 @@ end
 
 local fade = 0
 
-local function onUpdate(dt)
+local function onPreRender(dt)
 	if MPCoreNetwork and not MPCoreNetwork.isMPSession() then return end
 	if not gamestate.gameRunning then return end
 
@@ -634,7 +634,7 @@ requestGameState()
 
 M.requestGameState = requestGameState
 M.sendContact = sendContact
-M.onUpdate = onUpdate
+M.onPreRender = onPreRender
 M.onVehicleSwitched = onVehicleSwitched
 M.resetInfected = resetInfected
 M.onExtensionUnloaded = onExtensionUnloaded
