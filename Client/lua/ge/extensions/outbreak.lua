@@ -439,7 +439,17 @@ local distancecolor = -1
 local function nametags(curentOwnerName,player,vehicle)
 	if gamestate.players[curentOwnerName] and gamestate.players[curentOwnerName].infected and not player.infected and curentOwnerName ~= vehicle.ownerName then
 		local vehPos = vec3(be:getObjectOOBBCenterXYZ(vehicle.gameVehicleID))
-		vehPos.z = vehPos.z + (vehicle.vehicleHeight * 0.5) + 0.2
+		local vehicleHeight = vec3()
+		if not vehicle.vehicleHeight then
+			local veh = MPVehicleGE.getVehicleByGameID(vehicle.gameVehicleID)
+			if veh and veh.getInitialHeight then
+				vehicleHeight = veh:getInitialHeight()
+				vehicle.vehicleHeight = vehicleHeight
+			end
+		else
+			vehicleHeight = vehicle.vehicleHeight
+		end
+		vehPos.z = vehPos.z + (vehicleHeight * 0.5) + 0.2
 		debugDrawer:drawTextAdvanced(vehPos, String(" Survivor "), ColorF(1,1,1,1), true, false, ColorI(200,50,50,255))
 	end
 end
