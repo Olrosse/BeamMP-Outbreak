@@ -671,7 +671,6 @@ M.onPreRender = onPreRender
 M.onVehicleSwitched = onVehicleSwitched
 M.resetInfected = resetInfected
 M.onExtensionUnloaded = onExtensionUnloaded
-M.onResetGameplay = onResetGameplay
 M.onVehicleSpawned = onVehicleSpawned
 M.onVehicleColorChanged = onVehicleColorChanged
 M.gamestate = gamestate
