@@ -434,7 +434,16 @@ local function onVehicleSpawned(VehicleID)
 	end
 end
 
-local distancecolor = -1
+local ffiFound = false
+if ffi and ffi.C then
+	ffiFound = true
+end
+local drawTextAdvanced = ffiFound and ffi.C.BNG_DBG_DRAW_TextAdvanced or nop
+
+
+local textRoundColor = color(255,255,255,254)
+local backRoundColor = color(200,50,50,200)
+
 
 local function nametags(curentOwnerName,player,vehicle)
 	if gamestate.players[curentOwnerName] and gamestate.players[curentOwnerName].infected and not player.infected and curentOwnerName ~= vehicle.ownerName then
@@ -450,9 +459,11 @@ local function nametags(curentOwnerName,player,vehicle)
 			vehicleHeight = vehicle.vehicleHeight
 		end
 		vehPos.z = vehPos.z + (vehicleHeight * 0.5) + 0.2
-		debugDrawer:drawTextAdvanced(vehPos, String(" Survivor "), ColorF(1,1,1,1), true, false, ColorI(200,50,50,255))
+		drawTextAdvanced(vehPos.x, vehPos.y, vehPos.z, String(" Survivor "), textRoundColor, true, false, backRoundColor, false, false)
 	end
 end
+
+local distancecolor = -1
 
 local function color(player,vehicle,dt)
 	if player.infected then
