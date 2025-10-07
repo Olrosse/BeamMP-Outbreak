@@ -5,10 +5,9 @@ local mod = math.fmod
 
 local gamestate = {players = {}, settings = {}}
 
-local defaultGreenFadeDistance = 20
+local defaultgreenFadeDistance = 20
 
 --extensions.unload("outbreak") extensions.load("outbreak") extensions.reload("outbreak")
-
 local blockedActions = {"dropPlayerAtCamera", "dropPlayerAtCameraNoReset", "recover_vehicle", "recover_vehicle_alt", "recover_to_last_road", "reload_vehicle", "reload_all_vehicles", "loadHome", "saveHome", "reset_all_physics" ,"reset_physics"}
 
 local function getStat(name)
@@ -342,7 +341,6 @@ local function updateGameState(data)
 	if txt ~= "" then
 		guihooks.message({txt = txt}, 1, "outbreak.time")
 	end
-	--\n
 	if gamestate.gameEnded then
 		local yourName = MPConfig.getNickname()
 		for playerName, playerData in pairs(gamestate.players) do
@@ -444,11 +442,12 @@ local drawTextAdvanced = ffiFound and ffi.C.BNG_DBG_DRAW_TextAdvanced or nop
 local textRoundColor = color(255,255,255,254)
 local backRoundColor = color(200,50,50,200)
 
+local vehTagPos = vec3()
 
 local function nametags(curentOwnerName,player,vehicle)
 	if gamestate.players[curentOwnerName] and gamestate.players[curentOwnerName].infected and not player.infected and curentOwnerName ~= vehicle.ownerName then
-		local vehPos = vec3(be:getObjectOOBBCenterXYZ(vehicle.gameVehicleID))
-		local vehicleHeight = vec3()
+		vehTagPos:set(be:getObjectOOBBCenterXYZ(vehicle.gameVehicleID))
+		local vehicleHeight = 0
 		if not vehicle.vehicleHeight then
 			local veh = MPVehicleGE.getVehicleByGameID(vehicle.gameVehicleID)
 			if veh and veh.getInitialHeight then
@@ -458,20 +457,25 @@ local function nametags(curentOwnerName,player,vehicle)
 		else
 			vehicleHeight = vehicle.vehicleHeight
 		end
-		vehPos.z = vehPos.z + (vehicleHeight * 0.5) + 0.2
-		drawTextAdvanced(vehPos.x, vehPos.y, vehPos.z, String(" Survivor "), textRoundColor, true, false, backRoundColor, false, false)
+		vehTagPos.z = vehTagPos.z + (vehicleHeight * 0.5) + 0.2
+		drawTextAdvanced(vehTagPos.x, vehTagPos.y, vehTagPos.z, String(" Survivor "), textRoundColor, true, false, backRoundColor, false, false)
 	end
 end
 
 local distancecolor = -1
 
+local defaultTransition = 1
+local defaultColorTimer = 1.6
+
+local tempLinearColor = Point4F(0, 0, 0, 0)
+
 local function color(player,vehicle,dt)
 	if player.infected then
 		if not vehicle.transition or not vehicle.colortimer then
-			vehicle.transition = 1
-			vehicle.colortimer = 1.6
+			vehicle.transition = defaultTransition
+			vehicle.colortimer = defaultColorTimer
 		end
-		local veh = be:getObjectByID(vehicle.gameVehicleID)
+		local veh = getObjectByID(vehicle.gameVehicleID)
 		if veh then
 			if not vehicle.originalColor then
 				vehicle.originalColor = veh.color
@@ -485,45 +489,74 @@ local function color(player,vehicle,dt)
 
 			if not gamestate.gameEnding or (gamestate.endtime - gamestate.time) > 1 then
 				local transition = vehicle.transition
-				local colortimer = vehicle.colortimer
-				local color = 0.6 - (1*((1+math.sin(colortimer))/2)*0.2)
-				local colorfade = (1*((1+math.sin(colortimer))/2))*math.max(0.6,transition)
-				local greenfade = 1 -((1*((1+math.sin(colortimer))/2))*(math.max(0.6,transition)))
-				if gamestate.settings and not gamestate.settings.ColorPulse then
-					color = 0.6
-					colorfade = transition
-					greenfade = 1 - transition
-				end
-				--dump(k,colorfade,greenfade,transition,colortimer,gamestate.settings)
+				if transition > 0 or gamestate.settings.ColorPulse then
+					vehicle.colortimer = vehicle.colortimer + (dt*2.6)
+					local colortimer = vehicle.colortimer
+					local sineState = (1+math.sin(colortimer))/2
+					local color = 0.6 - (1*sineState*0.2)
+					local colorFade = (1*sineState)*math.max(0.6,transition)
+					local greenFade = 1 -((1*sineState)*(math.max(0.6,transition)))
+					if not gamestate.settings.ColorPulse then
+						color = 0.6
+						colorFade = transition
+						greenFade = 1 - transition
+					end
+					local colorAdd = (color*greenFade)
 
-	
-				veh.color = ColorF(vehicle.originalColor.x*colorfade,(vehicle.originalColor.y*colorfade) + (color*greenfade), vehicle.originalColor.z*colorfade, vehicle.originalColor.w):asLinear4F()
-				veh.colorPalette0 = ColorF(vehicle.originalcolorPalette0.x*colorfade,(vehicle.originalcolorPalette0.y*colorfade) + (color*greenfade), vehicle.originalcolorPalette0.z*colorfade, vehicle.originalcolorPalette0.w):asLinear4F()
-				veh.colorPalette1 = ColorF(vehicle.originalcolorPalette1.x*colorfade,(vehicle.originalcolorPalette1.y*colorfade) + (color*greenfade), vehicle.originalcolorPalette1.z*colorfade, vehicle.originalcolorPalette1.w):asLinear4F()
-		
-				vehicle.colortimer = colortimer + (dt*2.6)
-				if transition > 0 then
+					tempLinearColor.x = vehicle.originalColor.x*colorFade
+					tempLinearColor.y = (vehicle.originalColor.y*colorFade) + colorAdd
+					tempLinearColor.z = vehicle.originalColor.z*colorFade
+					tempLinearColor.w = vehicle.originalColor.w
+					veh.color = tempLinearColor
+
+					tempLinearColor.x = vehicle.originalcolorPalette0.x*colorFade
+					tempLinearColor.y = (vehicle.originalcolorPalette0.y*colorFade) + colorAdd
+					tempLinearColor.z = vehicle.originalcolorPalette0.z*colorFade
+					tempLinearColor.w = vehicle.originalcolorPalette0.w
+					veh.colorPalette0 = tempLinearColor
+
+					tempLinearColor.x = vehicle.originalcolorPalette1.x*colorFade
+					tempLinearColor.y = (vehicle.originalcolorPalette1.y*colorFade) + colorAdd
+					tempLinearColor.z = vehicle.originalcolorPalette1.z*colorFade
+					tempLinearColor.w = vehicle.originalcolorPalette1.w
+					veh.colorPalette1 = tempLinearColor
+
 					vehicle.transition = math.max(0,transition - dt)
-				end
 
-				vehicle.color = color
-				vehicle.colorfade = colorfade
-				vehicle.greenfade = greenfade
+					vehicle.color = color
+					vehicle.colorFade = colorFade
+					vehicle.greenFade = greenFade
+				end
 			elseif (gamestate.endtime - gamestate.time) <= 1 then
 				local transition = vehicle.transition
-				local color = vehicle.color or 0
-				local colorfade = vehicle.colorfade or 1
-				local greenfade = vehicle.greenfade or 0
-				--dump(k,colorfade,greenfade,transition,vehicle.colortimer)
-		
-				veh.color = ColorF(vehicle.originalColor.x*colorfade,(vehicle.originalColor.y*colorfade) + (color*greenfade), vehicle.originalColor.z*colorfade, vehicle.originalColor.w):asLinear4F()
-				veh.colorPalette0 = ColorF(vehicle.originalcolorPalette0.x*colorfade,(vehicle.originalcolorPalette0.y*colorfade) + (color*greenfade), vehicle.originalcolorPalette0.z*colorfade, vehicle.originalcolorPalette0.w):asLinear4F()
-				veh.colorPalette1 = ColorF(vehicle.originalcolorPalette1.x*colorfade,(vehicle.originalcolorPalette1.y*colorfade) + (color*greenfade), vehicle.originalcolorPalette1.z*colorfade, vehicle.originalcolorPalette1.w):asLinear4F()
-		
-				vehicle.colorfade = math.min(1,colorfade + dt)
-				vehicle.greenfade = math.max(0,greenfade - dt)
-				vehicle.colortimer = 1.6
 				if transition < 1 then
+					local color = vehicle.color or 0
+					local colorFade = vehicle.colorFade or 1
+					local greenFade = vehicle.greenFade or 0
+					--dump(k,colorFade,greenFade,transition,vehicle.colortimer)
+					local colorAdd = (color*greenFade)
+
+					tempLinearColor.x = vehicle.originalColor.x*colorFade
+					tempLinearColor.y = (vehicle.originalColor.y*colorFade) + colorAdd
+					tempLinearColor.z = vehicle.originalColor.z*colorFade
+					tempLinearColor.w = vehicle.originalColor.w
+					veh.color = tempLinearColor
+
+					tempLinearColor.x = vehicle.originalcolorPalette0.x*colorFade
+					tempLinearColor.y = (vehicle.originalcolorPalette0.y*colorFade) + colorAdd
+					tempLinearColor.z = vehicle.originalcolorPalette0.z*colorFade
+					tempLinearColor.w = vehicle.originalcolorPalette0.w
+					veh.colorPalette0 = tempLinearColor
+
+					tempLinearColor.x = vehicle.originalcolorPalette1.x*colorFade
+					tempLinearColor.y = (vehicle.originalcolorPalette1.y*colorFade) + colorAdd
+					tempLinearColor.z = vehicle.originalcolorPalette1.z*colorFade
+					tempLinearColor.w = vehicle.originalcolorPalette1.w
+					veh.colorPalette1 = tempLinearColor
+
+					vehicle.colorFade = math.min(1,colorFade + dt)
+					vehicle.greenFade = math.max(0,greenFade - dt)
+					vehicle.colortimer = 1.6
 					vehicle.transition = math.min(1,transition + dt)
 				end
 			end
@@ -532,38 +565,54 @@ local function color(player,vehicle,dt)
 end
 
 local fade = 0
+local vehPos = vec3()
 local lastVehPos = vec3()
+local vehVel = vec3()
 local moveTimer = 0
+local isStopped = true
 
 local function checkForMovement(currentVehID,currentVeh,dt)
-	local vehPos = vec3(be:getObjectOOBBCenterXYZ(currentVehID))
-	local vehVel = currentVeh:getVelocity()
-	if distance(vehPos,lastVehPos) > 1 then
+	vehPos:set(be:getObjectOOBBCenterXYZ(currentVehID))
+	vehVel:set(currentVeh:getVelocityXYZ())
+	if vehPos:squaredDistance(lastVehPos) > 1^2 then
 		moveTimer = 5
-		lastVehPos = vehPos
+		lastVehPos:set(vehPos)
 	else
 		moveTimer = math.max(0,moveTimer - dt)
 	end
 	if vehVel:length() < (gamestate.settings.maxResetMovingSpeed or 2) or moveTimer < 0 then
-		core_input_actionFilter.setGroup('noResetsInfection', blockedActions)
-		core_input_actionFilter.addAction(0, 'noResetsInfection', false)
+		if not isStopped then
+			core_input_actionFilter.setGroup('noResetsInfection', blockedActions)
+			core_input_actionFilter.addAction(0, 'noResetsInfection', false)
+		end
+		isStopped = true
 	else
-		core_input_actionFilter.setGroup('noResetsInfection', blockedActions)
-		core_input_actionFilter.addAction(0, 'noResetsInfection', true)
+		if isStopped then
+			core_input_actionFilter.setGroup('noResetsInfection', blockedActions)
+			core_input_actionFilter.addAction(0, 'noResetsInfection', true)
+		end
+		isStopped = false
 	end
 end
+
+local focusedVehPos = vec3()
+local otherVehPos = vec3()
+
+local defaultTintColor = Point4F(0, 0.12, 0,1)
+local infectedTintColor = Point4F(0, 0.15, 0,1)
 
 local function onPreRender(dt)
 	if MPCoreNetwork and not MPCoreNetwork.isMPSession() then return end
 	if not gamestate.gameRunning then return end
-
 	local currentVehID = be:getPlayerVehicleID(0)
-	local currentVeh = be:getObjectByID(currentVehID)
+	local currentVeh = getObjectByID(currentVehID)
 	local curentOwnerName = MPConfig.getNickname()
 
 	if currentVehID and MPVehicleGE.getVehicleByGameID(currentVehID) then
 		curentOwnerName = MPVehicleGE.getVehicleByGameID(currentVehID).ownerName
 	end
+
+	local focusedPlayer = gamestate.players[curentOwnerName]
 
 	if gamestate.settings and gamestate.settings.disableResetsWhenMoving == true then
 		if MPVehicleGE.isOwn(currentVehID) then
@@ -572,22 +621,20 @@ local function onPreRender(dt)
 	end
 
 	local closestInfected = 100000000
-	--local infectedClose = false
-
 	for k,vehicle in pairs(MPVehicleGE.getVehicles()) do
 		if gamestate.players then
 			local player = gamestate.players[vehicle.ownerName]
 			if player then
 				nametags(curentOwnerName,player,vehicle)
 				color(player,vehicle,dt)
-				if gamestate.players[curentOwnerName] and currentVehID and not gamestate.players[curentOwnerName].infected and gamestate.players[vehicle.ownerName].infected and currentVehID ~= vehicle.gameVehicleID then
-					local veh = be:getObjectByID(vehicle.gameVehicleID)
+				if currentVehID and not focusedPlayer.infected and player.infected and currentVehID ~= vehicle.gameVehicleID then
+					local veh = getObjectByID(vehicle.gameVehicleID)
 					if veh and currentVeh then
-						if gamestate.players[vehicle.ownerName].infected then
-							local distance = distance(currentVeh:getPosition(),veh:getPosition())
-							if distance < closestInfected then
-								closestInfected = distance
-							end
+						focusedVehPos:set(be:getObjectOOBBCenterXYZ(currentVehID))
+						otherVehPos:set(be:getObjectOOBBCenterXYZ(vehicle.gameVehicleID))
+						local distance = focusedVehPos:squaredDistance(otherVehPos)
+						if distance < closestInfected then
+							closestInfected = distance
 						end
 					end
 				end
@@ -595,31 +642,23 @@ local function onPreRender(dt)
 		end
 	end
 
-	local tempSetting = defaultGreenFadeDistance
+	closestInfected = math.sqrt(closestInfected)
+
+	local tempSetting = defaultgreenFadeDistance
 	if gamestate.settings then
-		tempSetting = gamestate.settings.GreenFadeDistance
+		tempSetting = gamestate.settings.greenFadeDistance
 	end
-	distancecolor = math.min(1,1 -(closestInfected/(tempSetting or defaultGreenFadeDistance)))
-
-	--if distancecolor > 0 then
-	--	core_input_actionFilter.setGroup('vehicleTeleporting', actionTemplate.vehicleTeleporting)
-	--	core_input_actionFilter.addAction(0, 'vehicleTeleporting', true)
-
-	--	core_input_actionFilter.setGroup('resetPhysics', actionTemplate.resetPhysics)
-	--	core_input_actionFilter.addAction(0, 'resetPhysics', true)
-	--else
-	--	core_input_actionFilter.addAction(0, 'vehicleTeleporting', false)
-	---	core_input_actionFilter.addAction(0, 'resetPhysics', false)
-	--end
+	distancecolor = math.min(1,1 -(closestInfected/(tempSetting or defaultgreenFadeDistance)))
 
 	if vignetteShaderAPI then
-		vignetteShaderAPI.setColor(Point4F(0, 0.12, 0,1))
+		vignetteShaderAPI.setColor(defaultTintColor)
 	end
-	if gamestate.settings and gamestate.settings.infectorTint and gamestate.players[curentOwnerName] and gamestate.players[curentOwnerName].infected then
+
+	if gamestate.settings and gamestate.settings.infectorTint and focusedPlayer.infected then
 		distancecolor = gamestate.settings.distancecolor or 0
 		if vignetteShaderAPI then
 			distancecolor = distancecolor + 0.2
-			vignetteShaderAPI.setColor(Point4F(0, 0.15, 0,1))
+			vignetteShaderAPI.setColor(infectedTintColor)
 		end
 	end
 
