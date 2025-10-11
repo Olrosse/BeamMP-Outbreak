@@ -127,10 +127,6 @@ local function gameStarting(time)
 	return days, hours , minutes , seconds
 end
 
-local function distance(vec1, vec2)
-	return math.sqrt((vec2.x-vec1.x)^2 + (vec2.y-vec1.y)^2 + (vec2.z-vec1.z)^2)
-end
-
 local function resetInfected()
 	for k,serverVehicle in pairs(MPVehicleGE.getVehicles()) do
 		local ID = serverVehicle.gameVehicleID
@@ -169,7 +165,7 @@ local function recieveGameState(data)
 	local data = jsonDecode(data)
 	gamestate = data
 	M.gamestate = gamestate
-	
+
 	gamestate.vehiclesOwners = {}
 	for k,vehicle in pairs(MPVehicleGE.getVehicles()) do
 		local ID = vehicle.gameVehicleID
@@ -200,7 +196,7 @@ end
 local function updateGameState(data)
 
 	mergeTable(jsonDecode(data),gamestate)
-	be:queueAllObjectLua("if outbreak then outbreak.setGameState("..serialize(gamestate)..") end")
+	be:queueAllObjectLua("if outbreak then outbreak.updateGameState('"..data.."') end")
 
 	-- In game messages
 	local time = 0
@@ -208,7 +204,7 @@ local function updateGameState(data)
 	if gamestate.time then time = gamestate.time-1 end
 
 	local txt = ""
-	
+
 	if gamestate.gameRunning and time and time == -4 then
 		if TriggerServerEvent then 
 			TriggerServerEvent("outbreak_clientReady","nil")
@@ -420,13 +416,14 @@ local function onVehicleSwitched(oldID,ID)
 end
 
 local function onVehicleSpawned(VehicleID)
-	local veh = be:getObjectByID(VehicleID)
+	local veh = getObjectByID(VehicleID)
 	if veh then
 		local vehicle = MPVehicleGE.getVehicleByGameID(VehicleID)
 		if vehicle then
 			vehicle.originalColor = veh.color
 			vehicle.originalcolorPalette0 = veh.colorPalette0
 			vehicle.originalcolorPalette1 = veh.colorPalette1
+			vehicle.transition = 1
 		end
 		veh:queueLuaCommand("if outbreak then outbreak.setGameState("..serialize(gamestate)..") end")
 	end
@@ -444,22 +441,20 @@ local backRoundColor = color(200,50,50,200)
 
 local vehTagPos = vec3()
 
-local function nametags(curentOwnerName,player,vehicle)
-	if gamestate.players[curentOwnerName] and gamestate.players[curentOwnerName].infected and not player.infected and curentOwnerName ~= vehicle.ownerName then
-		vehTagPos:set(be:getObjectOOBBCenterXYZ(vehicle.gameVehicleID))
-		local vehicleHeight = 0
-		if not vehicle.vehicleHeight then
-			local veh = MPVehicleGE.getVehicleByGameID(vehicle.gameVehicleID)
-			if veh and veh.getInitialHeight then
-				vehicleHeight = veh:getInitialHeight()
-				vehicle.vehicleHeight = vehicleHeight
-			end
-		else
-			vehicleHeight = vehicle.vehicleHeight
+local function drawSurvivorTag(vehicle)
+	vehTagPos:set(be:getObjectOOBBCenterXYZ(vehicle.gameVehicleID))
+	local vehicleHeight = 0
+	if not vehicle.vehicleHeight or vehicle.vehicleHeight == 0 then
+		local veh = getObjectByID(vehicle.gameVehicleID)
+		if veh and veh.getInitialHeight then
+			vehicleHeight = veh:getInitialHeight()
+			vehicle.vehicleHeight = vehicleHeight
 		end
-		vehTagPos.z = vehTagPos.z + (vehicleHeight * 0.5) + 0.2
-		drawTextAdvanced(vehTagPos.x, vehTagPos.y, vehTagPos.z, String(" Survivor "), textRoundColor, true, false, backRoundColor, false, false)
+	else
+		vehicleHeight = vehicle.vehicleHeight
 	end
+	vehTagPos.z = vehTagPos.z + (vehicleHeight * 0.5) + 0.2
+	drawTextAdvanced(vehTagPos.x, vehTagPos.y, vehTagPos.z, String(" Survivor "), textRoundColor, true, false, backRoundColor, false, false)
 end
 
 local distancecolor = -1
@@ -613,6 +608,7 @@ local function onPreRender(dt)
 	end
 
 	local focusedPlayer = gamestate.players[curentOwnerName]
+	if not focusedPlayer then return end
 
 	if gamestate.settings and gamestate.settings.disableResetsWhenMoving == true then
 		if MPVehicleGE.isOwn(currentVehID) then
@@ -625,16 +621,21 @@ local function onPreRender(dt)
 		if gamestate.players then
 			local player = gamestate.players[vehicle.ownerName]
 			if player then
-				nametags(curentOwnerName,player,vehicle)
 				color(player,vehicle,dt)
-				if currentVehID and not focusedPlayer.infected and player.infected and currentVehID ~= vehicle.gameVehicleID then
-					local veh = getObjectByID(vehicle.gameVehicleID)
-					if veh and currentVeh then
-						focusedVehPos:set(be:getObjectOOBBCenterXYZ(currentVehID))
-						otherVehPos:set(be:getObjectOOBBCenterXYZ(vehicle.gameVehicleID))
-						local distance = focusedVehPos:squaredDistance(otherVehPos)
-						if distance < closestInfected then
-							closestInfected = distance
+				if currentVehID and currentVehID ~= vehicle.gameVehicleID then
+					if focusedPlayer.infected and not player.infected then
+						if curentOwnerName ~= vehicle.ownerName then
+							drawSurvivorTag(vehicle)
+						end
+					elseif player.infected then
+						local veh = getObjectByID(vehicle.gameVehicleID)
+						if veh and currentVeh then
+							focusedVehPos:set(be:getObjectOOBBCenterXYZ(currentVehID))
+							otherVehPos:set(be:getObjectOOBBCenterXYZ(vehicle.gameVehicleID))
+							local distance = focusedVehPos:squaredDistance(otherVehPos)
+							if distance < closestInfected then
+								closestInfected = distance
+							end
 						end
 					end
 				end
@@ -690,6 +691,7 @@ local function onVehicleColorChanged(vehID,index,paint)
 		elseif index == 3 then
 			vehicle.originalcolorPalette1 = ColorF(paint.baseColor[1],paint.baseColor[2],paint.baseColor[3],paint.baseColor[4]):asLinear4F()
 		end
+		vehicle.transition = 1
 	end
 end
 
