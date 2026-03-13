@@ -2,6 +2,7 @@ local M = {}
 
 M.gamestate = {players = {}, settings = {}}
 
+local gameRunning = false
 local gameModeUpdate = nop
 local gameModeUpdateRunning = false
 
@@ -17,36 +18,35 @@ local function checkGameRunning()
 	end
 end
 
-local function setGameState(data)
-	M.gamestate = data
-	checkGameRunning()
-end
+local currentMailboxVersion = -1
 
-local function mergeTable(table,gamestateTable)
-	for variableName,value in pairs(table) do
-		if type(value) == "table" then
-			if not gamestateTable[variableName] then
-				gamestateTable[variableName] = {}
-			end
-			mergeTable(value,gamestateTable[variableName])
-		elseif value == "remove" then
-			gamestateTable[variableName] = nil
-		else
-			gamestateTable[variableName] = value
-		end
-	end
-end
-
-local function updateGameState(data)
-	mergeTable(jsonDecode(data),M.gamestate)
-	checkGameRunning()
+local function updateGameState(dt)
+	local lastMailboxVersion = obj:getLastMailboxVersion("OutbreakGameState")
+	if currentMailboxVersion ~= lastMailboxVersion then
+		currentMailboxVersion = lastMailboxVersion
+		M.gamestate = lpack.decode(obj:getLastMailbox("OutbreakGameState"))
+		checkGameRunning()
+    end
 end
 
 local function updateGFX()
-	gameModeUpdate()
+	if gameRunning then
+		updateGameState()
+		gameModeUpdate()
+	end
+	outbreakcontactdetection.checkForCollisions()
 end
 
-M.setGameState = setGameState
+local function setGameIsRunning()
+	gameRunning = true
+end
+
+local function setGameIsStopped()
+	gameRunning = false
+end
+
+M.setGameIsRunning = setGameIsRunning
+M.setGameIsStopped = setGameIsStopped
 M.updateGameState = updateGameState
 M.updateGFX = updateGFX
 

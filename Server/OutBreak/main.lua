@@ -212,7 +212,7 @@ local function gameEnd(reason)
 		end
 	end
 	if reason == "time" then
-		MP.SendChatMessage(-1,"Game over,"..nonInfectedCount.." survived and "..infectedCount.." got infected")
+		MP.SendChatMessage(-1,"Game over, "..nonInfectedCount.." survived and "..infectedCount.." got infected")
 	elseif reason == "infected" then
 		MP.SendChatMessage(-1,"Game over, no survivors")
 	elseif reason == "manual" then
@@ -398,7 +398,7 @@ local function gameRunningLoop()
 				MP.SendChatMessage(-1,""..playername.." has been infected!")
 				MP.TriggerClientEvent(-1, "outbreak_recieveInfected", playername)
 			elseif player.stats and gameState.time > 5 and not player.infected then
-				if	not player.stats.survivedTime then
+				if not player.stats.survivedTime then
 					player.stats.survivedTime = 5
 				end
 				player.stats.survivedTime = player.stats.survivedTime + 1

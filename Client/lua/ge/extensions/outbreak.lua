@@ -155,6 +155,7 @@ local function resetInfected()
 	core_input_actionFilter.setGroup('noResetsInfection', blockedActions)
 	core_input_actionFilter.addAction(0, 'noResetsInfection', false)
 
+	be:queueAllObjectLua("if outbreak then outbreak.setGameIsStopped() end")
 	--core_input_actionFilter.addAction(0, 'vehicleTeleporting', false)
 	--core_input_actionFilter.addAction(0, 'vehicleMenues', false)
 	--core_input_actionFilter.addAction(0, 'freeCam', false)
@@ -175,7 +176,12 @@ local function recieveGameState(data)
 		end
 	end
 	gamestate = data
-	be:queueAllObjectLua("if outbreak then outbreak.setGameState("..serialize(gamestate)..") end")
+	be:sendToMailbox("OutbreakGameState", lpack.encodeBinWorkBuffer(gamestate))
+	if gamestate.gameRunning then
+		be:queueAllObjectLua("if outbreak then outbreak.setGameIsRunning() end")
+	else
+		be:queueAllObjectLua("if outbreak then outbreak.setGameIsStopped() end")
+	end
 end
 
 local function mergeTable(table,gamestateTable)
@@ -196,7 +202,7 @@ end
 local function updateGameState(data)
 
 	mergeTable(jsonDecode(data),gamestate)
-	be:queueAllObjectLua("if outbreak then outbreak.updateGameState('"..data.."') end")
+	be:sendToMailbox("OutbreakGameState", lpack.encodeBinWorkBuffer(gamestate))
 
 	-- In game messages
 	local time = 0
@@ -213,7 +219,7 @@ local function updateGameState(data)
 
 	if gamestate.gameRunning and time and time == 0 then
 		MPVehicleGE.hideNicknames(true)
-
+		be:queueAllObjectLua("if outbreak then outbreak.setGameIsRunning() end")
 		--if gamestate.settings and gamestate.settings.mode = "competitive" then
 		--	core_input_actionFilter.setGroup('vehicleTeleporting', actionTemplate.vehicleTeleporting)
 		--	core_input_actionFilter.addAction(0, 'vehicleTeleporting', true)
@@ -425,7 +431,7 @@ local function onVehicleSpawned(VehicleID)
 			vehicle.originalcolorPalette1 = veh.colorPalette1
 			vehicle.transition = 1
 		end
-		veh:queueLuaCommand("if outbreak then outbreak.setGameState("..serialize(gamestate)..") end")
+		--veh:queueLuaCommand("if outbreak then outbreak.setGameState("..serialize(gamestate)..") end")
 	end
 end
 
