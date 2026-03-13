@@ -146,8 +146,8 @@ local function resetInfected()
 
 	MPVehicleGE.hideNicknames(false)
 
-	if vignetteShaderAPI then
-		vignetteShaderAPI.resetVignette()
+	if obvignetteShaderAPI then
+		obvignetteShaderAPI.resetVignette()
 	end
 	scenetree["PostEffectCombinePassObject"]:setField("enableBlueShift", 0,0)
 	scenetree["PostEffectCombinePassObject"]:setField("blueShiftColor", 0,"0 0 0")
@@ -237,8 +237,8 @@ local function updateGameState(data)
 
 	if time and time < 0 then
 		txt = "Game starts in "..math.abs(time).." seconds"
-		if vignetteShaderAPI and not vignetteShaderAPI.isEnabled() then
-			vignetteShaderAPI.setEnabled(true)
+		if obvignetteShaderAPI and not obvignetteShaderAPI.isEnabled() then
+			obvignetteShaderAPI.setEnabled(true)
 		end
 	elseif gamestate.gameRunning and not gamestate.gameEnding and time or gamestate.endtime and (gamestate.endtime - time) > 9 then
 
@@ -657,15 +657,15 @@ local function onPreRender(dt)
 	end
 	distancecolor = math.min(1,1 -(closestInfected/(tempSetting or defaultgreenFadeDistance)))
 
-	if vignetteShaderAPI then
-		vignetteShaderAPI.setColor(defaultTintColor)
+	if obvignetteShaderAPI then
+		obvignetteShaderAPI.setColor(defaultTintColor)
 	end
 
 	if gamestate.settings and gamestate.settings.infectorTint and focusedPlayer.infected then
 		distancecolor = gamestate.settings.distancecolor or 0
-		if vignetteShaderAPI then
+		if obvignetteShaderAPI then
 			distancecolor = distancecolor + 0.2
-			vignetteShaderAPI.setColor(infectedTintColor)
+			obvignetteShaderAPI.setColor(infectedTintColor)
 		end
 	end
 
@@ -675,12 +675,12 @@ local function onPreRender(dt)
 		fade = math.max(0,fade - dt)
 	end
 
-	if vignetteShaderAPI then
-		if not vignetteShaderAPI.isEnabled() then
-			vignetteShaderAPI.setEnabled(true)
+	if obvignetteShaderAPI then
+		if not obvignetteShaderAPI.isEnabled() then
+			obvignetteShaderAPI.setEnabled(true)
 		end
-		vignetteShaderAPI.setInnerRadius((0.8 - math.max(0,distancecolor*fade)))
-		vignetteShaderAPI.setOuterRadius((1.8 - math.max(0,distancecolor*fade))) --math.max(0,1 -(distancecolor*2))
+		obvignetteShaderAPI.setInnerRadius((0.8 - math.max(0,distancecolor*fade)))
+		obvignetteShaderAPI.setOuterRadius((1.8 - math.max(0,distancecolor*fade))) --math.max(0,1 -(distancecolor*2))
 	else
 		scenetree["PostEffectCombinePassObject"]:setField("enableBlueShift", 0,distancecolor*0.7*fade)
 		scenetree["PostEffectCombinePassObject"]:setField("blueShiftColor", 0,"0 1 0")
